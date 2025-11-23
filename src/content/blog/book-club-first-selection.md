@@ -34,7 +34,7 @@ We'll meet **every other Thursday at 6:30 PM** starting February 6th. Each sessi
 ## How to Participate
 
 1. **Get the book** - Available in print, Kindle, or audiobook format
-2. **Join our Discord** - We have a dedicated channel for book club discussions
+2. **[Join our Discord](https://discord.gg/k3rZXhmBjf)** - We have a dedicated channel for book club discussions
 3. **Mark your calendar** - Meeting details will be posted in Discord
 4. **Come prepared** - Read the assigned chapters and bring questions or insights
 
@@ -42,6 +42,6 @@ We'll meet **every other Thursday at 6:30 PM** starting February 6th. Each sessi
 
 Whether you're building web applications, working with databases, or designing distributed systems, DDIA provides the conceptual foundation you need. The principles in this book apply across programming languages and specific technologies.
 
-Even if you can't attend every session, the book is worth reading on your own. We'll share discussion notes and insights in our Discord channel.
+Even if you can't attend every session, the book is worth reading on your own. We'll share discussion notes and insights in our [Discord channel](https://discord.gg/k3rZXhmBjf).
 
 See you at the first meeting!

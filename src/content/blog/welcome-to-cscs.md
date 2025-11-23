@@ -26,7 +26,7 @@ Stay tuned for workshops, tech talks, and networking events throughout the year.
 
 We're building this community together. Here's how you can participate:
 
-- **Join our Discord** - Connect with other members, ask questions, and share your knowledge
+- **[Join our Discord](https://discord.gg/k3rZXhmBjf)** - Connect with other members, ask questions, and share your knowledge
 - **Attend Meetups** - Check our schedule for upcoming book club meetings and coding sessions
 - **Write for Us** - Share your technical expertise through blog posts
 - **Spread the Word** - Tell your friends and colleagues about CSCS
