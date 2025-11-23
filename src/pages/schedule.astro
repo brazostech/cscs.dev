@@ -1,0 +1,378 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+
+/**
+ * SCHEDULE EVENTS
+ *
+ * TODO: This schedule is currently static. In the future, this should be replaced
+ * with an API call to fetch events dynamically. This will allow for:
+ * - Easy updates without redeployment
+ * - Cancellations and one-off changes
+ * - RSVP tracking
+ * - Integration with calendar services
+ *
+ * For now, update the events array below to modify the schedule.
+ */
+
+interface Event {
+  id: string
+  title: string
+  type: 'book-club' | 'meetup'
+  date: string // YYYY-MM-DD format
+  time: string
+  timeZone: string
+  location: string
+  locationDetails?: string
+  description?: string
+}
+
+// Generate upcoming events (update these dates as needed)
+const upcomingEvents: Event[] = [
+  // Book Club - Every Saturday at 2pm CST
+  {
+    id: 'bc-2025-11-23',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2025-11-23',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2025-11-30',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2025-11-30',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2025-12-07',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2025-12-07',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2025-12-14',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2025-12-14',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2025-12-21',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2025-12-21',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2025-12-28',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2025-12-28',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2026-01-04',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2026-01-04',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+  {
+    id: 'bc-2026-01-11',
+    title: 'Book Club: The Lean Product Playbook',
+    type: 'book-club',
+    date: '2026-01-11',
+    time: '2:00 PM',
+    timeZone: 'CST',
+    location: 'Zoom',
+    locationDetails: 'Link available to members',
+    description: 'Discussing chapters from Dan Olsen\'s The Lean Product Playbook',
+  },
+
+  // Algorithms Meetup - Every other Saturday at 10am CST
+  {
+    id: 'am-2025-11-23',
+    title: 'Algorithms Meetup',
+    type: 'meetup',
+    date: '2025-11-23',
+    time: '10:00 AM',
+    timeZone: 'CST',
+    location: 'Capsher Technologies',
+    locationDetails: '1604 Crescent Pointe Pkwy, College Station, TX 77845',
+    description: 'Collaborative problem solving and algorithm practice',
+  },
+  {
+    id: 'am-2025-12-07',
+    title: 'Algorithms Meetup',
+    type: 'meetup',
+    date: '2025-12-07',
+    time: '10:00 AM',
+    timeZone: 'CST',
+    location: 'Capsher Technologies',
+    locationDetails: '1604 Crescent Pointe Pkwy, College Station, TX 77845',
+    description: 'Collaborative problem solving and algorithm practice',
+  },
+  {
+    id: 'am-2025-12-21',
+    title: 'Algorithms Meetup',
+    type: 'meetup',
+    date: '2025-12-21',
+    time: '10:00 AM',
+    timeZone: 'CST',
+    location: 'Capsher Technologies',
+    locationDetails: '1604 Crescent Pointe Pkwy, College Station, TX 77845',
+    description: 'Collaborative problem solving and algorithm practice',
+  },
+  {
+    id: 'am-2026-01-04',
+    title: 'Algorithms Meetup',
+    type: 'meetup',
+    date: '2026-01-04',
+    time: '10:00 AM',
+    timeZone: 'CST',
+    location: 'Capsher Technologies',
+    locationDetails: '1604 Crescent Pointe Pkwy, College Station, TX 77845',
+    description: 'Collaborative problem solving and algorithm practice',
+  },
+  {
+    id: 'am-2026-01-18',
+    title: 'Algorithms Meetup',
+    type: 'meetup',
+    date: '2026-01-18',
+    time: '10:00 AM',
+    timeZone: 'CST',
+    location: 'Capsher Technologies',
+    locationDetails: '1604 Crescent Pointe Pkwy, College Station, TX 77845',
+    description: 'Collaborative problem solving and algorithm practice',
+  },
+]
+
+// Filter out past events and sort by date
+const today = new Date()
+today.setHours(0, 0, 0, 0) // Start of today
+
+const futureEvents = upcomingEvents
+  .filter(event => {
+    const eventDate = new Date(event.date)
+    return eventDate >= today
+  })
+  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+// Format date for display
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+// Get relative time (e.g., "Tomorrow", "In 3 days")
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+
+  const diffTime = date.getTime() - today.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays < 7) return `In ${diffDays} days`
+  if (diffDays < 14) return 'Next week'
+  return `In ${Math.floor(diffDays / 7)} weeks`
+}
+
+// Get badge color based on event type
+function getBadgeColor(type: Event['type']): string {
+  return type === 'book-club'
+    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+}
+---
+
+<Layout
+  title="Schedule - College Station Computer Science"
+  description="Join us for book clubs and algorithm meetups. Check out our upcoming events and community gatherings."
+>
+  <Header client:load />
+
+  <div class="bg-white dark:bg-zinc-900 min-h-screen">
+    <!-- Hero Section -->
+    <div class="relative isolate overflow-hidden">
+      <!-- Background Pattern -->
+      <svg
+        aria-hidden="true"
+        class="absolute inset-0 -z-10 h-full w-full stroke-zinc-200 dark:stroke-zinc-800 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]"
+      >
+        <defs>
+          <pattern
+            x="50%"
+            y={-1}
+            id="schedule-pattern"
+            width={200}
+            height={200}
+            patternUnits="userSpaceOnUse"
+          >
+            <path d="M.5 200V.5H200" fill="none" />
+          </pattern>
+        </defs>
+        <rect fill="url(#schedule-pattern)" width="100%" height="100%" strokeWidth={0} />
+      </svg>
+
+      <div class="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+        <div class="mx-auto max-w-2xl lg:mx-0">
+          <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-6xl">
+            Event Schedule
+          </h1>
+          <p class="mt-6 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            Join us for weekly book clubs and bi-weekly algorithm meetups. All times are in Central Standard Time (CST).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events List -->
+    <div class="mx-auto max-w-7xl px-6 pb-24 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:max-w-none">
+
+        {futureEvents.length === 0 ? (
+          <div class="text-center py-12">
+            <p class="text-lg text-zinc-600 dark:text-zinc-400">
+              No upcoming events scheduled. Check back soon!
+            </p>
+          </div>
+        ) : (
+          <div class="space-y-4">
+            {futureEvents.map((event) => (
+              <article
+                key={event.id}
+                class="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-3">
+                      <span class={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getBadgeColor(event.type)}`}>
+                        {event.type === 'book-club' ? 'Book Club' : 'Algorithms Meetup'}
+                      </span>
+                      <span class="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                        {getRelativeTime(event.date)}
+                      </span>
+                    </div>
+
+                    <h2 class="text-xl font-semibold text-zinc-900 dark:text-white mb-2">
+                      {event.title}
+                    </h2>
+
+                    {event.description && (
+                      <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                        {event.description}
+                      </p>
+                    )}
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div class="flex items-start gap-2">
+                        <svg class="h-5 w-5 text-zinc-500 dark:text-zinc-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <div>
+                          <p class="font-medium text-zinc-900 dark:text-white">{formatDate(event.date)}</p>
+                          <p class="text-zinc-600 dark:text-zinc-400">{event.time} {event.timeZone}</p>
+                        </div>
+                      </div>
+
+                      <div class="flex items-start gap-2">
+                        <svg class="h-5 w-5 text-zinc-500 dark:text-zinc-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div>
+                          <p class="font-medium text-zinc-900 dark:text-white">{event.location}</p>
+                          {event.locationDetails && (
+                            <p class="text-zinc-600 dark:text-zinc-400">{event.locationDetails}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <!-- Recurring Schedule Info -->
+        <div class="mt-16 grid gap-8 sm:grid-cols-2">
+          <div class="rounded-xl bg-indigo-50 dark:bg-indigo-950/20 p-6 ring-1 ring-indigo-100 dark:ring-indigo-900/30">
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+              Book Club
+            </h3>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Every Saturday at 2:00 PM CST via Zoom
+            </p>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">
+              Currently reading: <span class="font-medium text-zinc-900 dark:text-white">The Lean Product Playbook</span> by Dan Olsen
+            </p>
+            <a href="/book-club" class="mt-4 inline-block text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300">
+              Learn more about Book Club →
+            </a>
+          </div>
+
+          <div class="rounded-xl bg-emerald-50 dark:bg-emerald-950/20 p-6 ring-1 ring-emerald-100 dark:ring-emerald-900/30">
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+              Algorithms Meetup
+            </h3>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Every other Saturday at 10:00 AM CST
+            </p>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">
+              Location: <span class="font-medium text-zinc-900 dark:text-white">Capsher Technologies</span>
+              <br />
+              1604 Crescent Pointe Pkwy, College Station, TX 77845
+            </p>
+            <a href="https://www.meetup.com/college-station-computer-science/" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300">
+              RSVP on Meetup.com →
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>

@@ -1,0 +1,171 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+---
+
+<Layout
+  title="Book Club - College Station Computer Science"
+  description="Join our technical book club exploring Computer Science, Product Development, and AI through collaborative learning."
+>
+  <Header client:load />
+
+  <div class="bg-white dark:bg-zinc-900 min-h-screen">
+    <!-- Hero Section -->
+    <div class="relative isolate overflow-hidden">
+      <!-- Background Pattern -->
+      <svg
+        aria-hidden="true"
+        class="absolute inset-0 -z-10 h-full w-full stroke-zinc-200 dark:stroke-zinc-800 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]"
+      >
+        <defs>
+          <pattern
+            x="50%"
+            y={-1}
+            id="book-pattern"
+            width={200}
+            height={200}
+            patternUnits="userSpaceOnUse"
+          >
+            <path d="M.5 200V.5H200" fill="none" />
+          </pattern>
+        </defs>
+        <rect fill="url(#book-pattern)" width="100%" height="100%" strokeWidth={0} />
+      </svg>
+
+      <div class="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+        <div class="mx-auto max-w-2xl lg:mx-0">
+          <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-6xl">
+            Book Club
+          </h1>
+          <p class="mt-6 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            Learning about Computer Science, Product Development, and AI through collaborative reading and discussion.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="mx-auto max-w-7xl px-6 pb-24 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:max-w-none">
+
+        <!-- About Section -->
+        <div class="mb-16">
+          <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl mb-6">
+            What We're About
+          </h2>
+          <div class="prose prose-zinc dark:prose-invert max-w-none">
+            <p class="text-lg text-zinc-600 dark:text-zinc-400">
+              Our book club brings together a group of friends passionate about deepening their understanding of technology,
+              product development, and artificial intelligence. We meet regularly to discuss technical literature, share insights,
+              and learn from each other's perspectives.
+            </p>
+          </div>
+        </div>
+
+        <!-- Current Book -->
+        <div class="mb-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 p-8 ring-1 ring-indigo-100 dark:ring-indigo-900/30">
+          <div class="flex items-center gap-x-3 mb-4">
+            <span class="inline-flex items-center rounded-full bg-indigo-600 px-3 py-1 text-sm font-medium text-white">
+              Currently Reading
+            </span>
+          </div>
+          <h3 class="text-2xl font-bold text-zinc-900 dark:text-white mb-2">
+            The Lean Product Playbook
+          </h3>
+          <p class="text-base text-zinc-600 dark:text-zinc-400 mb-1">
+            by Dan Olsen
+          </p>
+          <p class="text-base text-zinc-600 dark:text-zinc-400 mt-4">
+            A comprehensive guide to achieving product-market fit through lean principles and iterative development.
+          </p>
+        </div>
+
+        <!-- Past Books -->
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl mb-6">
+            Books We've Read
+          </h2>
+
+          <div class="grid gap-6 sm:grid-cols-2">
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+              <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                Designing Data-Intensive Applications
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                by Martin Kleppmann
+              </p>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                An essential deep dive into distributed systems, databases, and the architecture of scalable applications.
+              </p>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+              <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                Hands-On Machine Learning
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                by Aurélien Géron
+              </p>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                Practical guide to building ML systems with Scikit-Learn, Keras, and TensorFlow.
+              </p>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+              <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                Designing Machine Learning Systems
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                by Chip Huyen
+              </p>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                Production-focused approach to building reliable, scalable ML systems in real-world environments.
+              </p>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 p-6">
+              <h3 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                AI Engineering
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                by Chip Huyen
+              </p>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                Comprehensive coverage of building and deploying AI applications at scale.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Membership Notice -->
+        <div class="mt-16 rounded-2xl bg-zinc-50 dark:bg-zinc-900/50 p-8 ring-1 ring-zinc-200 dark:ring-zinc-800">
+          <h2 class="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+            Interested in Joining?
+          </h2>
+          <p class="text-base text-zinc-600 dark:text-zinc-400 mb-6">
+            We're currently not accepting new members, but we may open up membership in the future.
+            Stay tuned by following our updates!
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <a
+              href="/blog"
+              class="inline-flex items-center rounded-lg bg-zinc-900 dark:bg-white px-4 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 shadow-sm hover:bg-zinc-700 dark:hover:bg-zinc-100 transition-colors"
+            >
+              Read Our Blog
+            </a>
+            <a
+              href="/#newsletter"
+              class="inline-flex items-center rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:text-white shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            >
+              Join Newsletter
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
