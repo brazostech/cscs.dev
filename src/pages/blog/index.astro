@@ -1,0 +1,86 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Layout title="Blog - College Station Computer Science" description="Technical articles, community updates, and insights from the College Station tech community.">
+  <Header client:load />
+  <div class="bg-white dark:bg-zinc-900 min-h-screen">
+
+    <!-- Main Content -->
+    <main class="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:max-w-none">
+        <div class="mb-16">
+          <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-5xl">
+            Blog
+          </h1>
+          <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
+            Technical articles, community updates, and insights from the College Station tech community.
+          </p>
+        </div>
+
+        <!-- Blog Posts Grid -->
+        <div class="grid gap-8 lg:grid-cols-2">
+          {posts.map((post) => (
+            <article class="flex flex-col rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors">
+              <div class="flex-1">
+                <div class="flex items-center gap-x-4 text-xs">
+                  <time datetime={post.data.pubDate.toISOString()} class="text-zinc-500 dark:text-zinc-400">
+                    {formatDate(post.data.pubDate)}
+                  </time>
+                  {post.data.tags.slice(0, 2).map((tag) => (
+                    <span class="relative z-10 rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 font-medium text-zinc-600 dark:text-zinc-400">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div class="group relative mt-4">
+                  <h2 class="text-xl font-semibold text-zinc-900 dark:text-white group-hover:text-zinc-700 dark:group-hover:text-zinc-300">
+                    <a href={`/blog/${post.slug}`}>
+                      <span class="absolute inset-0"></span>
+                      {post.data.title}
+                    </a>
+                  </h2>
+                  <p class="mt-3 text-base text-zinc-600 dark:text-zinc-400 line-clamp-3">
+                    {post.data.description}
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6 flex items-center gap-x-4 border-t border-zinc-200 dark:border-zinc-800 pt-6">
+                <div class="text-sm">
+                  <p class="font-semibold text-zinc-900 dark:text-white">
+                    {post.data.author}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {posts.length === 0 && (
+          <div class="text-center py-12">
+            <p class="text-lg text-zinc-600 dark:text-zinc-400">
+              No blog posts yet. Check back soon!
+            </p>
+          </div>
+        )}
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+</Layout>

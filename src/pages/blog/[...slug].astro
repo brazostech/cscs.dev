@@ -1,0 +1,101 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Layout title={`${post.data.title} - CSCS Blog`} description={post.data.description}>
+  <Header client:load />
+  <div class="bg-white dark:bg-zinc-900 min-h-screen">
+
+    <!-- Article Content -->
+    <article class="mx-auto max-w-3xl px-6 py-24 sm:py-32 lg:px-8">
+      <header class="mb-12">
+        <div class="flex items-center gap-x-4 text-sm mb-6">
+          <time datetime={post.data.pubDate.toISOString()} class="text-zinc-500 dark:text-zinc-400">
+            {formatDate(post.data.pubDate)}
+          </time>
+          {post.data.tags.map((tag) => (
+            <span class="relative z-10 rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 font-medium text-zinc-600 dark:text-zinc-400">
+              {tag}
+            </span>
+          ))}
+        </div>
+        <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-5xl mb-4">
+          {post.data.title}
+        </h1>
+        <p class="text-xl text-zinc-600 dark:text-zinc-400 mb-8">
+          {post.data.description}
+        </p>
+        <div class="flex items-center gap-x-4 border-t border-zinc-200 dark:border-zinc-800 pt-6">
+          <div class="text-sm">
+            <p class="font-semibold text-zinc-900 dark:text-white">
+              By {post.data.author}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <div class="prose prose-zinc dark:prose-invert prose-lg max-w-none
+        prose-headings:font-semibold prose-headings:text-zinc-900 dark:prose-headings:text-white
+        prose-p:text-zinc-600 dark:prose-p:text-zinc-400
+        prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
+        prose-strong:text-zinc-900 dark:prose-strong:text-white
+        prose-code:text-zinc-900 dark:prose-code:text-white prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none
+        prose-pre:bg-zinc-900 dark:prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-800
+        prose-li:text-zinc-600 dark:prose-li:text-zinc-400
+        prose-blockquote:border-zinc-300 dark:prose-blockquote:border-zinc-700 prose-blockquote:text-zinc-600 dark:prose-blockquote:text-zinc-400">
+        <Content />
+      </div>
+
+      <!-- Share Section -->
+      <footer class="mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-white">
+              Enjoyed this article?
+            </h3>
+            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Share it with your network
+            </p>
+          </div>
+          <div class="flex gap-x-4">
+            <a
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.data.title)}&url=${encodeURIComponent(`https://cscs.dev/blog/${post.slug}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            >
+              <span class="sr-only">Share on Twitter</span>
+              <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M13.6823 10.6218L20.2391 3H18.6854L12.9921 9.61788L8.44486 3H3.2002L10.0765 13.0074L3.2002 21H4.75404L10.7663 14.0113L15.5685 21H20.8131L13.6819 10.6218H13.6823ZM11.5541 13.0956L10.8574 12.0991L5.31391 4.16971H7.70053L12.1742 10.5689L12.8709 11.5655L18.6861 19.8835H16.2995L11.5541 13.096V13.0956Z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </footer>
+    </article>
+
+    <Footer />
+  </div>
+</Layout>
