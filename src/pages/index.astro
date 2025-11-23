@@ -1,0 +1,12 @@
+---
+import Hero from '../components/Hero';
+import Newsletter from '../components/Newsletter';
+import Footer from '../components/Footer';
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+	<Hero client:load />
+	<Newsletter client:visible />
+	<Footer />
+</Layout>
