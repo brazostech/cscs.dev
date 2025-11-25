@@ -22,9 +22,34 @@ function formatDate(date: Date) {
     day: 'numeric',
   });
 }
+
+const blogPostSchema = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": post.data.title,
+  "description": post.data.description,
+  "image": post.data.image || "https://cscs.dev/og-image.jpg",
+  "datePublished": post.data.pubDate.toISOString(),
+  "dateModified": post.data.pubDate.toISOString(),
+  "author": {
+    "@type": "Person",
+    "name": post.data.author
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "College Station Computer Science",
+    "url": "https://cscs.dev"
+  }
+};
 ---
 
-<Layout title={`${post.data.title} - CSCS Blog`} description={post.data.description}>
+<Layout 
+  title={`${post.data.title} - CSCS Blog`} 
+  description={post.data.description}
+  image={post.data.image}
+  type="article"
+>
+  <script type="application/ld+json" set:html={JSON.stringify(blogPostSchema)} />
   <Header client:load />
   <div class="bg-white dark:bg-zinc-900 min-h-screen">
 
