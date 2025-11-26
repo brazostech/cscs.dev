@@ -1,0 +1,53 @@
+# Multi-arch PocketBase container
+# Supports: linux/arm64 (Mac dev) and linux/amd64 (VM deployment)
+# Build with: docker buildx build --platform linux/arm64,linux/amd64 -t social-gen-backend .
+
+FROM alpine:3.19 AS builder
+
+# Docker buildx automatically provides these args when using --platform
+ARG TARGETOS
+ARG TARGETARCH
+
+# PocketBase version to download
+ARG POCKETBASE_VERSION=0.34.0
+
+# Install dependencies for downloading and extracting
+RUN apk add --no-cache \
+    ca-certificates \
+    unzip \
+    wget
+
+# Download and extract the appropriate PocketBase binary
+WORKDIR /tmp
+RUN wget "https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/pocketbase_${POCKETBASE_VERSION}_${TARGETOS}_${TARGETARCH}.zip" \
+    && unzip "pocketbase_${POCKETBASE_VERSION}_${TARGETOS}_${TARGETARCH}.zip" \
+    && chmod +x pocketbase
+
+# Final runtime image
+FROM alpine:3.19
+
+# Install ca-certificates for HTTPS (needed for OAuth, webhooks, etc.)
+RUN apk add --no-cache ca-certificates
+
+# Copy PocketBase binary from builder
+COPY --from=builder /tmp/pocketbase /usr/local/bin/pocketbase
+
+# Create directory for persistent data
+# This should be mounted as a volume
+RUN mkdir -p /pb_data /pb_migrations /app
+
+WORKDIR /app
+
+COPY . /pb_migrations
+
+# Expose PocketBase default port
+EXPOSE 8090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+
+# Run PocketBase
+# --http=0.0.0.0:8090 ensures it listens on all interfaces (important for containers)
+# Data will be stored in /pb_data (mount as volume for persistence)
+CMD ["pocketbase", "serve", "--http=0.0.0.0:8090"]

@@ -1,0 +1,23 @@
+# PocketBase runtime data - contains database, uploads, and user data
+pb_data/
+
+# PocketBase migrations (may want to track these eventually)
+# Uncomment the line below to track migrations in git
+# pb_migrations/
+
+# Environment variables with secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.tar.gz
+*.zip
+backup/
