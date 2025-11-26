@@ -1,5 +1,5 @@
 # This is for LOCAL DEVELOPMENT only
-# - API runs with --reload for hot reloading
+# - Frontend and source code mounted as volumes for hot-reloading
 # - Source code is mounted as a volume
 # - Production deployments use Podman pod specifications
 
