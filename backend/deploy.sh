@@ -86,7 +86,7 @@ up() {
         # Note: We must specify device-name so the startup script finds /dev/disk/by-id/google-pod-data-disk
         DISK_FLAG="--disk=name=$DISK_NAME,device-name=${DISK_NAME}-disk,auto-delete=no"
     else
-        echo "cw  Disk '$DISK_NAME' not found. Creating new..."
+        echo "💾  Disk '$DISK_NAME' not found. Creating new..."
         DISK_FLAG="--create-disk=name=$DISK_NAME,size=10GB,type=pd-balanced,device-name=${DISK_NAME}-disk,auto-delete=no,disk-resource-policy=pod-data-daily-backup"
     fi
 
