@@ -1,0 +1,52 @@
+# This is for LOCAL DEVELOPMENT only
+# - Frontend and source code mounted as volumes for hot-reloading
+# - Source code is mounted as a volume
+# - Production deployments use Podman pod specifications
+
+version: '3.8'
+
+services:
+  pocketbase:
+    build:
+      context: ./backend
+      dockerfile: Containerfile
+      args:
+        POCKETBASE_VERSION: 0.34.0
+    container_name: pocketbase
+    ports:
+      - "8090:8090"
+    volumes:
+      # Mount pb_data for persistent storage (SQLite database, uploaded files, etc.)
+      - ./backend/pb_data:/pb_data
+      # Optional: mount migrations if you have any
+      - ./backend/pb_migrations:/pb_migrations
+    environment:
+      # Add any environment variables PocketBase might need
+      # For now, defaults are fine
+      - TZ=UTC
+    restart: unless-stopped
+
+  cscs:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: cscs-website
+    ports:
+      - "4321:4321"
+    volumes:
+      # Mount the entire project directory to /app for hot-reloading
+      - .:/app:z
+      # Use an anonymous volume to hide host node_modules and use the container's
+      - /app/node_modules
+    command: ["npm", "run", "dev", "--", "--host"]
+    environment:
+      # PocketBase connection (internal network)
+      - POCKETBASE_URL=http://pocketbase:8090
+    depends_on:
+      pocketbase:
+        condition: service_started
+    restart: unless-stopped
+
+networks:
+  default:
+    name: cscs-network

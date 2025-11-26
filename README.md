@@ -11,21 +11,26 @@ A community website for the local tech community in the Bryan-College Station ar
 
 ## Getting Started
 
-```bash
-# Install dependencies
-npm install
+To get started with development, you'll need Podman and Podman Compose installed.
 
-# Start development server
-npm run dev
+1.  **Start the Development Environment:**
 
-# Build for production
-npm run build
+    Run the following command to build the container images and start the development services (frontend and backend):
 
-# Preview production build
-npm run preview
-```
+    ```bash
+    podman-compose up --build -d
+    ```
 
-The dev server runs at `http://localhost:4321` (or next available port).
+    *   The frontend application will be accessible at `http://localhost:4321`. It supports hot-reloading: any changes you make to the source code on your host machine will automatically refresh in the browser.
+    *   The backend (PocketBase) will be accessible at `http://localhost:8090`.
+
+2.  **Stop the Development Environment:**
+
+    To stop and remove the running containers, use:
+
+    ```bash
+    podman-compose down
+    ```
 
 ## Project Structure
 
