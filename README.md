@@ -1,4 +1,5 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/2dcb81d1-35ab-4001-bf99-7deb67c5496a/deploy-status)](https://app.netlify.com/projects/cscsdev/deploys)
+[![CI](https://github.com/The-Read-Onlys/cscs.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/The-Read-Onlys/cscs.dev/actions/workflows/ci.yml)
 
 # College Station Computer Science (CSCS)
 
