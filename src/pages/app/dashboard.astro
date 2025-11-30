@@ -1,0 +1,162 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AppLayout from '../../components/AppLayout';
+
+const title = 'Dashboard';
+const description = 'App dashboard';
+---
+
+<Layout title={title} description={description}>
+  <AppLayout client:only="react" currentPath="/app/dashboard">
+    <div id="dashboard-content">
+      <div class="text-center py-12">
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"></div>
+        <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">Loading...</p>
+      </div>
+    </div>
+  </AppLayout>
+
+  <script>
+    import { pb } from '../../lib/pocketbase';
+
+    function loadDashboard() {
+      console.log('loadDashboard called');
+      const container = document.getElementById('dashboard-content');
+      console.log('container:', container);
+      if (!container) {
+        console.error('Container not found!');
+        return;
+      }
+
+      const user = pb.authStore.model;
+      console.log('user:', user);
+
+      if (!user) {
+        console.log('No user, redirecting to login');
+        window.location.href = '/login';
+        return;
+      }
+
+      console.log('user.verified:', user.verified);
+
+      // Build dashboard content
+      let dashboardHTML = '<div class="space-y-8">';
+
+      // Verification status section
+      if (!user.verified) {
+        dashboardHTML += `
+          <div class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-6">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div class="ml-3 flex-1">
+                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Email Verification Required
+                </h3>
+                <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                  <p>Please verify your email address (${user.email}) to access full app features. Check your inbox for the verification email.</p>
+                </div>
+                <div class="mt-4 flex gap-3">
+                  <button
+                    onclick="resendVerification()"
+                    id="resend-btn"
+                    class="text-sm font-medium text-yellow-800 hover:text-yellow-900 dark:text-yellow-200 dark:hover:text-yellow-100 underline"
+                  >
+                    Resend verification email
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="resend-message"></div>
+        `;
+      } else {
+        dashboardHTML += `
+          <div class="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+            <div class="flex items-center">
+              <svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <p class="ml-3 text-sm text-green-800 dark:text-green-200">
+                Your email is verified
+              </p>
+            </div>
+          </div>
+        `;
+      }
+
+      // My RSVPs section (placeholder for now)
+      dashboardHTML += `
+        <div>
+          <h2 class="text-lg font-semibold text-zinc-900 dark:text-white mb-4">My Upcoming Events</h2>
+          <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+            <svg class="mx-auto h-12 w-12 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-semibold text-zinc-900 dark:text-white">No upcoming events</h3>
+            <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              ${user.verified ? 'Visit the Events page to RSVP to events.' : 'Verify your email to RSVP to events.'}
+            </p>
+            ${user.verified ? '<a href="/app/events" class="mt-4 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">Browse Events →</a>' : ''}
+          </div>
+        </div>
+      `;
+
+      dashboardHTML += '</div>';
+
+      // Render dashboard
+      container.innerHTML = dashboardHTML;
+    }
+
+    // Make resend function available globally
+    (window as any).resendVerification = async function() {
+      const btn = document.getElementById('resend-btn');
+      const messageDiv = document.getElementById('resend-message');
+      if (!btn || !messageDiv) return;
+
+      const user = pb.authStore.model;
+      if (!user) return;
+
+      btn.setAttribute('disabled', 'true');
+      btn.textContent = 'Sending...';
+
+      try {
+        await pb.collection('users').requestVerification(user.email);
+        messageDiv.innerHTML = `
+          <p class="text-sm text-green-600 dark:text-green-400">
+            ✓ Verification email sent! Check your inbox.
+          </p>
+        `;
+      } catch (error) {
+        messageDiv.innerHTML = `
+          <p class="text-sm text-red-600 dark:text-red-400">
+            Failed to send verification email. Please try again later.
+          </p>
+        `;
+        btn.removeAttribute('disabled');
+        btn.textContent = 'Resend Verification Email';
+      }
+    };
+
+    // Load dashboard when page loads
+    // Use setTimeout to ensure React component has rendered
+    function waitForContainer() {
+      const container = document.getElementById('dashboard-content');
+      if (container) {
+        loadDashboard();
+      } else {
+        // Retry after a short delay
+        setTimeout(waitForContainer, 50);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', waitForContainer);
+    } else {
+      waitForContainer();
+    }
+  </script>
+</Layout>

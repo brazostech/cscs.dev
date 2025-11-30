@@ -1,0 +1,26 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AppLayout from '../../components/AppLayout';
+import EventForm from '../../components/EventForm';
+
+const editId = Astro.url.searchParams.get('edit');
+const title = editId ? 'Edit Event' : 'Create Event';
+const description = editId ? 'Update event details' : 'Create a new event';
+---
+
+<Layout title={title} description={description}>
+  <AppLayout client:only="react" currentPath="/app/events">
+    <div class="space-y-8">
+      <div>
+        <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">{title}</h1>
+        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          {description}
+        </p>
+      </div>
+
+      <div class="max-w-2xl">
+        <EventForm client:load eventId={editId} />
+      </div>
+    </div>
+  </AppLayout>
+</Layout>

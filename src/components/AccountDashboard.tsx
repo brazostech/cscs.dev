@@ -84,9 +84,14 @@ export default function AccountDashboard() {
 
         <Divider className="my-8" />
 
-        <Button onClick={handleLogout} color="red">
-          Sign Out
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button href="/app" color="indigo">
+            Go to App
+          </Button>
+          <Button onClick={handleLogout} color="red">
+            Sign Out
+          </Button>
+        </div>
       </div>
     </div>
   );

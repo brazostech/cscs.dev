@@ -1,0 +1,11 @@
+---
+// Redirect /app to /app/dashboard (which handles verification check)
+if (typeof window === 'undefined') {
+  return Astro.redirect('/app/dashboard');
+}
+---
+
+<script>
+  // Client-side redirect as backup
+  window.location.href = '/app/dashboard';
+</script>
