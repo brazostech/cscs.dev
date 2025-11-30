@@ -31,12 +31,14 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Register the user
+      // Register the user with default role
+      // API rules ensure users cannot set role to 'moderator'
       await register({
         email,
         password,
         passwordConfirm,
         name: name || undefined,
+        role: 'user',
       });
 
       // Automatically log them in after registration

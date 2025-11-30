@@ -5,6 +5,7 @@ import { Heading, Subheading } from './catalyst/heading';
 import { Text } from './catalyst/text';
 import { DescriptionList, DescriptionTerm, DescriptionDetails } from './catalyst/description-list';
 import { Divider } from './catalyst/divider';
+import { Badge } from './catalyst/badge';
 
 export default function AccountDashboard() {
   const { user, isLoading } = useAuth();
@@ -33,7 +34,14 @@ export default function AccountDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <Heading>Account Dashboard</Heading>
+        <div className="flex items-center gap-3">
+          <Heading>Account Dashboard</Heading>
+          {user.role && (
+            <Badge color={user.role === 'moderator' ? 'indigo' : 'zinc'}>
+              {user.role === 'moderator' ? 'Moderator' : 'User'}
+            </Badge>
+          )}
+        </div>
         <Text className="mt-2 text-zinc-600 dark:text-zinc-400">
           Manage your account information and settings
         </Text>
