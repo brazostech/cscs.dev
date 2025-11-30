@@ -1,0 +1,22 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import AccountDashboard from '../components/AccountDashboard';
+
+const title = 'Account';
+const description = 'Manage your CSCS account';
+---
+
+<Layout title={title} description={description}>
+  <Header client:only="react" />
+  <div class="min-h-screen bg-white dark:bg-zinc-900">
+    <main class="relative isolate px-6 py-24 sm:py-32 lg:px-8">
+      <div class="mx-auto max-w-3xl">
+        <AccountDashboard client:load />
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+</Layout>

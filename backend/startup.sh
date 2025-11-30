@@ -70,6 +70,7 @@ spec:
       - "--http=0.0.0.0:80"
       - "--https=0.0.0.0:443"
       - "--dir=/data/pb_data"
+      - "--migrationsDir=/pb_migrations"
     volumeMounts:
     - mountPath: /data
       name: data-volume

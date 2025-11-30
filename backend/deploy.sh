@@ -94,7 +94,7 @@ up() {
     gcloud compute instances create $VM_NAME \
         --image-family=ubuntu-2404-lts-amd64 \
         --image-project=ubuntu-os-cloud \
-        --machine-type=e2-small \
+        --machine-type=e2-micro \
         --tags=https-server \
         --scopes=cloud-platform \
         --address=$STATIC_IP \

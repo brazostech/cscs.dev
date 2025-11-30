@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import LoginForm from '../components/LoginForm';
+import { Heading } from '../components/catalyst/heading';
+import { Text } from '../components/catalyst/text';
+
+const title = 'Sign In';
+const description = 'Sign in to your CSCS account';
+---
+
+<Layout title={title} description={description}>
+  <Header client:only="react" />
+
+  <div class="min-h-screen bg-white dark:bg-zinc-900">
+    <main class="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-12 lg:px-8">
+      <div class="w-full max-w-sm">
+        <div class="text-center">
+          <Heading>Sign in to your account</Heading>
+          <Text className="mt-2 text-zinc-600 dark:text-zinc-400">
+            Welcome back! Please enter your details.
+          </Text>
+        </div>
+
+        <div class="mt-10">
+          <LoginForm client:load />
+        </div>
+
+        <Text className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+          Don't have an account?{' '}
+          <a href="/register" class="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+            Sign up
+          </a>
+        </Text>
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+</Layout>

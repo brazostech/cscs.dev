@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import RegisterForm from '../components/RegisterForm';
+import { Heading } from '../components/catalyst/heading';
+import { Text } from '../components/catalyst/text';
+
+const title = 'Create Account';
+const description = 'Create your CSCS account';
+---
+
+<Layout title={title} description={description}>
+  <Header client:only="react" />
+
+  <div class="min-h-screen bg-white dark:bg-zinc-900">
+    <main class="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-12 lg:px-8">
+      <div class="w-full max-w-sm">
+        <div class="text-center">
+          <Heading>Create your account</Heading>
+          <Text className="mt-2 text-zinc-600 dark:text-zinc-400">
+            Join the College Station Computer Science community.
+          </Text>
+        </div>
+
+        <div class="mt-10">
+          <RegisterForm client:load />
+        </div>
+
+        <Text className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+          Already have an account?{' '}
+          <a href="/login" class="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+            Sign in
+          </a>
+        </Text>
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+</Layout>

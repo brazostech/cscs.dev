@@ -14,7 +14,7 @@ services:
         POCKETBASE_VERSION: 0.34.0
     container_name: pocketbase
     ports:
-      - "8090:8090"
+      - "8080:8080"
     volumes:
       # Mount pb_data for persistent storage (SQLite database, uploaded files, etc.)
       - ./backend/pb_data:/pb_data
@@ -24,6 +24,8 @@ services:
       # Add any environment variables PocketBase might need
       # For now, defaults are fine
       - TZ=UTC
+    # Override CMD to explicitly use mounted volumes for data and migrations
+    command: ["pocketbase", "serve", "--http=0.0.0.0:8080", "--dir=/pb_data", "--migrationsDir=/pb_migrations"]
     restart: unless-stopped
 
   cscs:
@@ -40,8 +42,9 @@ services:
       - /app/node_modules
     command: ["npm", "run", "dev", "--", "--host"]
     environment:
-      # PocketBase connection (internal network)
-      - POCKETBASE_URL=http://pocketbase:8090
+      # PocketBase URL (client-side only - static site)
+      # Must use localhost for browser access
+      - PUBLIC_POCKETBASE_URL=http://localhost:8080
     depends_on:
       pocketbase:
         condition: service_started

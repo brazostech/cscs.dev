@@ -9,6 +9,7 @@ import sitemap from "@astrojs/sitemap";
 // https://astro.build/config
 export default defineConfig({
   site: "https://cscs.dev",
+  output: "static", // Static site generation - no SSR
 
   vite: {
     plugins: [tailwindcss()],

@@ -53,7 +53,7 @@ const blogPostSchema = {
     type="application/ld+json"
     set:html={JSON.stringify(blogPostSchema)}
   />
-  <Header client:load />
+  <Header client:only="react" />
   <div class="min-h-screen bg-white dark:bg-zinc-900">
     <!-- Article Content -->
     <article class="mx-auto max-w-3xl px-6 py-24 sm:py-32 lg:px-8">

@@ -227,7 +227,7 @@ function getBadgeColor(type: Event["type"]): string {
   title="Schedule - College Station Computer Science"
   description="Join us for book clubs and algorithm meetups. Check out our upcoming events and community gatherings."
 >
-  <Header client:load />
+  <Header client:only="react" />
 
   <div class="min-h-screen bg-white dark:bg-zinc-900">
     <!-- Hero Section -->
