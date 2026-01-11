@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import eslintPluginAstro from "eslint-plugin-astro";
 import tseslint from "typescript-eslint";
 
@@ -9,6 +12,7 @@ export default [
       "node_modules/",
       "backend/",
       "catalyst-ui-kit/",
+      "storybook-static/",
     ],
   },
   ...tseslint.configs.recommended,
@@ -20,4 +24,5 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  ...storybook.configs["flat/recommended"],
 ];
