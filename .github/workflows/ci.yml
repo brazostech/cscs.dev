@@ -20,9 +20,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run lint
         run: npm run lint
@@ -30,5 +31,11 @@ jobs:
       - name: Run format check
         run: npm run format -- --check
 
+      - name: Run tests
+        run: npm run test:run
+
       - name: Run build
         run: npm run build
+
+      - name: Build Storybook
+        run: npm run build-storybook
