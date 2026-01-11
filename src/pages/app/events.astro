@@ -123,7 +123,7 @@ const description = 'View and RSVP to upcoming events';
 
           // Mobile card view
           const cardHTML = `
-            <div class="md:hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
+            <div class="lg:hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <h3 class="text-sm font-medium text-zinc-900 dark:text-white">${event.title}</h3>
@@ -153,7 +153,7 @@ const description = 'View and RSVP to upcoming events';
 
           // Desktop table row
           const rowHTML = `
-            <tr class="hidden md:table-row">
+            <tr class="hidden lg:table-row">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <div>
@@ -185,13 +185,13 @@ const description = 'View and RSVP to upcoming events';
         const rowsHTML = eventsHTML.map(e => e.rowHTML).join('');
 
         container.innerHTML = `
-          <!-- Mobile card view -->
-          <div class="md:hidden space-y-4">
+          <!-- Card view (mobile and tablet) -->
+          <div class="lg:hidden space-y-4">
             ${cardsHTML}
           </div>
 
-          <!-- Desktop table view -->
-          <div class="hidden md:block overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <!-- Desktop table view (lg and up) -->
+          <div class="hidden lg:block overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
             <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
               <thead class="bg-zinc-50 dark:bg-zinc-900">
                 <tr>
