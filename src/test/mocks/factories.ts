@@ -31,8 +31,21 @@ export interface MockUser {
   updated: string;
 }
 
+export interface MockRsvp {
+  id: string;
+  event: string;
+  user: string;
+  created: string;
+  updated: string;
+  expand?: {
+    event?: MockEvent;
+    user?: MockUser;
+  };
+}
+
 let eventCounter = 0;
 let userCounter = 0;
+let rsvpCounter = 0;
 
 /**
  * Create a mock event with sensible defaults.
@@ -103,9 +116,38 @@ export function createMockEvents(
 }
 
 /**
+ * Create a mock RSVP with sensible defaults.
+ * All properties can be overridden.
+ */
+export function createMockRsvp(overrides?: Partial<MockRsvp>): MockRsvp {
+  rsvpCounter++;
+  const now = new Date().toISOString();
+
+  return {
+    id: `rsvp_${rsvpCounter}_${Math.random().toString(36).substring(2, 7)}`,
+    event: `event_${rsvpCounter}`,
+    user: `user_${rsvpCounter}`,
+    created: now,
+    updated: now,
+    ...overrides,
+  };
+}
+
+/**
+ * Create multiple mock RSVPs.
+ */
+export function createMockRsvps(
+  count: number,
+  overrides?: Partial<MockRsvp>,
+): MockRsvp[] {
+  return Array.from({ length: count }, () => createMockRsvp(overrides));
+}
+
+/**
  * Reset counters between test suites if needed.
  */
 export function resetFactoryCounters(): void {
   eventCounter = 0;
   userCounter = 0;
+  rsvpCounter = 0;
 }

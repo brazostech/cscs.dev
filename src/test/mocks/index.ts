@@ -7,9 +7,12 @@ export {
   createMockUser,
   createMockModerator,
   createMockEvents,
+  createMockRsvp,
+  createMockRsvps,
   resetFactoryCounters,
   type MockEvent,
   type MockUser,
+  type MockRsvp,
 } from "./factories";
 
 export {

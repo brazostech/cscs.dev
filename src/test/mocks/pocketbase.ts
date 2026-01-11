@@ -21,7 +21,7 @@
  */
 
 import { vi, type Mock } from "vitest";
-import { type MockUser } from "./factories";
+import { type MockUser, type MockRsvp } from "./factories";
 
 export interface CollectionMocks {
   getOne: Mock;
@@ -58,6 +58,8 @@ export interface CreateMockPocketBaseOptions {
   user?: MockUser | null;
   /** Custom collection mock overrides */
   collectionOverrides?: Partial<CollectionMocks>;
+  /** Mock RSVPs for testing RSVP functionality */
+  rsvps?: MockRsvp[];
 }
 
 /**
@@ -141,6 +143,9 @@ export function createMockPocketBaseModule(
 ) {
   const mockPb = createMockPocketBase(options);
 
+  // RSVP mock state
+  const rsvps = options.rsvps ?? [];
+
   return {
     pb: mockPb,
     // Re-export helper functions as simple mocks
@@ -154,6 +159,57 @@ export function createMockPocketBaseModule(
     onAuthChange: vi.fn(),
     requestPasswordReset: vi.fn().mockResolvedValue(true),
     requestVerification: vi.fn().mockResolvedValue(true),
+    // RSVP functions
+    rsvpToEvent: vi.fn().mockImplementation((eventId: string) => {
+      const user = options.user;
+      if (!user) return Promise.reject(new Error("Must be logged in to RSVP"));
+      const newRsvp: MockRsvp = {
+        id: `rsvp_${Date.now()}`,
+        event: eventId,
+        user: user.id,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      };
+      rsvps.push(newRsvp);
+      return Promise.resolve(newRsvp);
+    }),
+    cancelRsvp: vi.fn().mockImplementation((rsvpId: string) => {
+      const idx = rsvps.findIndex((r) => r.id === rsvpId);
+      if (idx >= 0) rsvps.splice(idx, 1);
+      return Promise.resolve();
+    }),
+    getUserEventRsvp: vi.fn().mockImplementation((eventId: string) => {
+      const user = options.user;
+      if (!user) return Promise.resolve(null);
+      const rsvp = rsvps.find((r) => r.event === eventId && r.user === user.id);
+      return Promise.resolve(rsvp ?? null);
+    }),
+    getUserRsvps: vi.fn().mockImplementation(() => {
+      const user = options.user;
+      if (!user) return Promise.resolve([]);
+      return Promise.resolve(rsvps.filter((r) => r.user === user.id));
+    }),
+    getEventRsvpCount: vi.fn().mockImplementation((eventId: string) => {
+      return Promise.resolve(rsvps.filter((r) => r.event === eventId).length);
+    }),
+    getEventRsvpCounts: vi.fn().mockImplementation((eventIds: string[]) => {
+      const counts: Record<string, number> = {};
+      eventIds.forEach((id) => {
+        counts[id] = rsvps.filter((r) => r.event === id).length;
+      });
+      return Promise.resolve(counts);
+    }),
+    getUserEventRsvps: vi.fn().mockImplementation((eventIds: string[]) => {
+      const user = options.user;
+      if (!user) return Promise.resolve({});
+      const rsvpMap: Record<string, MockRsvp> = {};
+      rsvps
+        .filter((r) => r.user === user.id && eventIds.includes(r.event))
+        .forEach((r) => {
+          rsvpMap[r.event] = r;
+        });
+      return Promise.resolve(rsvpMap);
+    }),
   };
 }
 
