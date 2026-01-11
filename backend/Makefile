@@ -46,7 +46,7 @@ push: ## Push existing image to registry
 
 .PHONY: run
 run: ## Run container locally
-	podman run --rm -p 8090:8090 -v $(PWD)/pb_data:/pb_data $(FULL_IMAGE)
+	podman run --rm -p 8080:8080 -v $(PWD)/pb_data:/pb_data -v $(PWD)/pb_migrations:/pb_migrations $(FULL_IMAGE)
 
 .PHONY: clean
 clean: ## Clean up builder and local images

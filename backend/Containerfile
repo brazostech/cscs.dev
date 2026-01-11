@@ -51,4 +51,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Run PocketBase
 # --http=0.0.0.0:8080 ensures it listens on all interfaces (important for containers)
 # Data will be stored in /pb_data (mount as volume for persistence)
-CMD ["pocketbase", "serve", "--http=0.0.0.0:8080"]
+# Migrations are loaded from /pb_migrations
+CMD ["pocketbase", "serve", "--http=0.0.0.0:8080", "--dir=/pb_data", "--migrationsDir=/pb_migrations"]
