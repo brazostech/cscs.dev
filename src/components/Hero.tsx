@@ -117,7 +117,7 @@ export default function Hero() {
                     for book clubs, Leetcode meetups, technical blogs, and more.
                   </p>
                   <div className="mt-10 flex items-center gap-x-6">
-                    <Button href="#" color="indigo">
+                    <Button href="https://discord.gg/k3rZXhmBjf" color="indigo">
                       Join the Community
                     </Button>
                     <Button href="/blog" outline>
