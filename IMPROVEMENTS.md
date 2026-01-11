@@ -56,8 +56,59 @@ Improving the development environment helps developers write better code more ef
 **Completed on:** 2025-11-29
 
 All items in this plan have been successfully implemented. The codebase now includes:
+
 - ESLint and Prettier for consistent code style.
 - A Husky pre-commit hook to enforce quality standards.
 - A GitHub Actions CI workflow for automated checks.
 - An updated `.vscode/extensions.json` for a better developer experience.
 
+---
+
+# Events Feature Roadmap
+
+This section tracks planned improvements for the events system.
+
+## Completed
+
+### Phase 1: Dynamic Public Schedule (2026-01-10)
+
+- Created `ScheduleEvents.tsx` component to fetch events from PocketBase
+- Updated `/schedule` page to display events dynamically instead of hardcoded data
+- Events are fetched publicly (no auth required), filtered to future events, sorted by date
+- Maintains same visual design with event type badges, relative time, and location details
+
+## In Progress
+
+### Phase 2: Recurring Event Support
+
+Allow moderators to create recurring events with a single form submission.
+
+**Planned Changes:**
+
+- Add recurrence options to EventForm (weekly, bi-weekly, monthly)
+- Generate individual event records based on recurrence pattern (max 26 occurrences)
+- Add `series_id` field to group related events
+- Remove unique constraint on `title` field (blocks recurring events with same name)
+- Update "Recurring Schedule Info" section to derive from event data
+
+## Backlog (Phase 3)
+
+### Schema & Data Improvements
+
+- [ ] **Field naming consistency**: Standardize `time_zone` vs `timeZone` across codebase
+- [ ] **Date/time storage**: Consider using proper date types instead of text for better sorting/filtering
+- [ ] **Add `created_by` field**: Track which user created each event (relation to users)
+- [ ] **Add `status` field**: Support draft/published/cancelled states for soft-cancel without delete
+- [ ] **Past event handling**: Define strategy for archiving or auto-deleting old events
+
+### Feature Improvements
+
+- [ ] **RSVP functionality**: Implement the RSVP button (currently shows "coming soon" placeholder)
+- [ ] **Event capacity**: Add `max_attendees` field and show availability
+- [ ] **Virtual event links**: Add dedicated `url` field for online meeting links
+
+### UI/UX Improvements
+
+- [ ] **Derive recurring schedule info from data**: Replace static "Book Club" and "Algorithms Meetup" info cards with data-driven content
+- [ ] **Event filtering**: Add ability to filter by event type on schedule page
+- [ ] **Calendar view**: Add optional calendar visualization of events

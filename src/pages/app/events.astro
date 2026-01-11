@@ -87,7 +87,7 @@ const description = 'View and RSVP to upcoming events';
           return;
         }
 
-        // Render events table
+        // Render events - cards on mobile, table on desktop
         const eventsHTML = events.map(event => {
           const eventDate = new Date(event.date);
           const formattedDate = eventDate.toLocaleDateString('en-US', {
@@ -97,8 +97,63 @@ const description = 'View and RSVP to upcoming events';
             day: 'numeric',
           });
 
-          return `
-            <tr>
+          // Action buttons (reused in both views)
+          const actionButtons = `
+            <button
+              onclick="alert('RSVP functionality coming soon!')"
+              class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10 hover:bg-indigo-100 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/30 dark:hover:bg-indigo-400/20 cursor-pointer"
+            >
+              RSVP
+            </button>
+            ${isModerator ? `
+              <a
+                href="/app/create-event?edit=${event.id}"
+                class="inline-flex items-center rounded-md bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-inset ring-zinc-700/10 hover:bg-zinc-100 dark:bg-zinc-400/10 dark:text-zinc-400 dark:ring-zinc-400/30 dark:hover:bg-zinc-400/20 cursor-pointer"
+              >
+                Edit
+              </a>
+              <button
+                onclick="deleteEvent('${event.id}')"
+                class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-700/10 hover:bg-red-100 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/30 dark:hover:bg-red-400/20 cursor-pointer"
+              >
+                Delete
+              </button>
+            ` : ''}
+          `;
+
+          // Mobile card view
+          const cardHTML = `
+            <div class="md:hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-medium text-zinc-900 dark:text-white">${event.title}</h3>
+                  <span class="inline-block mt-1 text-xs text-zinc-500 dark:text-zinc-400">${event.type}</span>
+                </div>
+              </div>
+              <div class="space-y-1 text-sm">
+                <div class="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+                  <svg class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  ${formattedDate} at ${event.time} ${event.time_zone}
+                </div>
+                <div class="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+                  <svg class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  ${event.location}${event.location_details ? ` - ${event.location_details}` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                ${actionButtons}
+              </div>
+            </div>
+          `;
+
+          // Desktop table row
+          const rowHTML = `
+            <tr class="hidden md:table-row">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <div>
@@ -117,34 +172,26 @@ const description = 'View and RSVP to upcoming events';
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end gap-2">
-                  <button
-                    onclick="alert('RSVP functionality coming soon!')"
-                    class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10 hover:bg-indigo-100 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/30 dark:hover:bg-indigo-400/20 cursor-pointer"
-                  >
-                    RSVP
-                  </button>
-                  ${isModerator ? `
-                    <a
-                      href="/app/create-event?edit=${event.id}"
-                      class="inline-flex items-center rounded-md bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-inset ring-zinc-700/10 hover:bg-zinc-100 dark:bg-zinc-400/10 dark:text-zinc-400 dark:ring-zinc-400/30 dark:hover:bg-zinc-400/20 cursor-pointer"
-                    >
-                      Edit
-                    </a>
-                    <button
-                      onclick="deleteEvent('${event.id}')"
-                      class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-700/10 hover:bg-red-100 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/30 dark:hover:bg-red-400/20 cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  ` : ''}
+                  ${actionButtons}
                 </div>
               </td>
             </tr>
           `;
-        }).join('');
+
+          return { cardHTML, rowHTML };
+        });
+
+        const cardsHTML = eventsHTML.map(e => e.cardHTML).join('');
+        const rowsHTML = eventsHTML.map(e => e.rowHTML).join('');
 
         container.innerHTML = `
-          <div class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <!-- Mobile card view -->
+          <div class="md:hidden space-y-4">
+            ${cardsHTML}
+          </div>
+
+          <!-- Desktop table view -->
+          <div class="hidden md:block overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
             <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
               <thead class="bg-zinc-50 dark:bg-zinc-900">
                 <tr>
@@ -163,7 +210,7 @@ const description = 'View and RSVP to upcoming events';
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-zinc-200 dark:bg-zinc-900 dark:divide-zinc-800">
-                ${eventsHTML}
+                ${rowsHTML}
               </tbody>
             </table>
           </div>
