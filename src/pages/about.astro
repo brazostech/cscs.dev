@@ -1,0 +1,194 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+---
+
+<Layout
+  title="About - College Station Computer Science"
+  description="CSCS is a community for developers, students, and tech professionals in the College Station and Bryan area."
+>
+  <Header client:only="react" />
+
+  <div class="min-h-screen bg-white dark:bg-zinc-900">
+    <!-- Hero Section -->
+    <div class="relative isolate overflow-hidden">
+      <!-- Background Pattern -->
+      <svg
+        aria-hidden="true"
+        class="absolute inset-0 -z-10 h-full w-full [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)] stroke-zinc-200 dark:stroke-zinc-800"
+      >
+        <defs>
+          <pattern
+            x="50%"
+            y={-1}
+            id="about-pattern"
+            width={200}
+            height={200}
+            patternUnits="userSpaceOnUse"
+          >
+            <path d="M.5 200V.5H200" fill="none"></path>
+          </pattern>
+        </defs>
+        <rect
+          fill="url(#about-pattern)"
+          width="100%"
+          height="100%"
+          strokeWidth={0}></rect>
+      </svg>
+
+      <div class="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
+        <div class="mx-auto max-w-2xl lg:mx-0">
+          <h1
+            class="text-4xl font-bold tracking-tight text-zinc-900 sm:text-6xl dark:text-white"
+          >
+            About CSCS
+          </h1>
+          <p class="mt-6 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            A community for developers, students, and tech professionals in the
+            College Station and Bryan area.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="mx-auto max-w-7xl px-6 pb-24 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:max-w-none">
+        <!-- Mission Section -->
+        <div class="mb-16">
+          <h2
+            class="mb-6 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white"
+          >
+            Our Mission
+          </h2>
+          <div class="prose prose-zinc dark:prose-invert max-w-none">
+            <p class="text-lg text-zinc-600 dark:text-zinc-400">
+              College Station Computer Science (CSCS) brings together people who
+              are passionate about software, technology, and continuous
+              learning. Whether you're a student just starting out, a seasoned
+              professional, or somewhere in between, our community is a place to
+              share knowledge, collaborate on ideas, and grow together.
+            </p>
+          </div>
+        </div>
+
+        <!-- What We Do Section -->
+        <div class="mb-16">
+          <h2
+            class="mb-6 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white"
+          >
+            What We Do
+          </h2>
+          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              class="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800"
+            >
+              <h3
+                class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white"
+              >
+                Book Club
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                Weekly discussions on technical books covering computer science,
+                product development, and AI. We read together and learn from
+                each other's perspectives.
+              </p>
+              <a
+                href="/book-club"
+                class="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                Learn more &rarr;
+              </a>
+            </div>
+
+            <div
+              class="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800"
+            >
+              <h3
+                class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white"
+              >
+                Algorithm Practice
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                Bi-weekly in-person meetups to work through algorithm and data
+                structure problems together. Sharpen your problem-solving skills
+                in a collaborative setting.
+              </p>
+              <a
+                href="/schedule"
+                class="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                See schedule &rarr;
+              </a>
+            </div>
+
+            <div
+              class="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800"
+            >
+              <h3
+                class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white"
+              >
+                Community Meetups
+              </h3>
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                General gatherings for networking, tech talks, and casual
+                conversations about what's happening in the world of software
+                and technology.
+              </p>
+              <a
+                href="https://www.meetup.com/college-station-computer-science/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                Join on Meetup &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Involved Section -->
+        <div
+          class="rounded-2xl bg-zinc-50 p-8 ring-1 ring-zinc-200 dark:bg-zinc-900/50 dark:ring-zinc-800"
+        >
+          <h2 class="mb-4 text-xl font-bold text-zinc-900 dark:text-white">
+            Get Involved
+          </h2>
+          <p class="mb-6 text-base text-zinc-600 dark:text-zinc-400">
+            There are several ways to connect with the CSCS community and stay
+            up to date with what we're working on.
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <a
+              href="https://discord.gg/k3rZXhmBjf"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+            >
+              Join our Discord
+            </a>
+            <a
+              href="https://www.meetup.com/college-station-computer-science/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+            >
+              Find us on Meetup
+            </a>
+            <a
+              href="https://github.com/The-Read-Onlys"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
