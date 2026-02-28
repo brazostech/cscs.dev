@@ -1,6 +1,6 @@
 ---
 name: work-on-issue
-description: Full lifecycle workflow for a GitHub issue — fetch context, create worktree, investigate, plan, implement, verify, commit, and open a PR.
+description: Full lifecycle workflow for a GitHub issue — fetch context, create worktree, investigate, plan, implement, verify, commit, open a PR, and monitor CI.
 disable-model-invocation: true
 argument-hint: "[issue-number]"
 ---
@@ -125,7 +125,36 @@ Generated with [Claude Code](https://claude.com/claude-code)
 
 ---
 
-## Step 9 — Cleanup
+## Step 9 — Monitor CI
+
+After the PR is created, wait for CI checks to complete and fix any failures.
+
+1. Watch for CI completion:
+   ```
+   gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --watch
+   ```
+
+2. **If all checks pass** → proceed to Step 10.
+
+3. **If any check fails** (max 3 fix attempts):
+   a. Identify failures:
+      ```
+      gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --json name,state,bucket
+      ```
+   b. Get failure logs:
+      ```
+      gh run view <run-id> --repo The-Read-Onlys/cscs.dev --log-failed
+      ```
+   c. Fix the failures in the worktree.
+   d. Re-run Step 6 (Verify) locally to confirm the fix.
+   e. Stage specific files, commit with a message like `fix: resolve CI failure in <check-name>`, and push.
+   f. Loop back to watch CI again (step 9.1).
+
+4. **If still failing after 3 attempts** → tell the user, provide the PR URL and failing check details, and proceed to Step 10.
+
+---
+
+## Step 10 — Cleanup
 
 Ask the user: "Should I close issue #$ARGUMENTS now, or let the PR merge close it automatically?"
 
@@ -144,3 +173,5 @@ Ask the user: "Should I close issue #$ARGUMENTS now, or let the PR merge close i
 | Lint fails | Fix errors, re-run lint |
 | Push rejected | Pull with rebase, resolve conflicts, push again |
 | PR already exists for branch | Show existing PR URL, ask user how to proceed |
+| CI check fails | Inspect logs, fix errors, push fix, re-monitor (max 3 attempts) |
+| CI monitoring timeout | Tell user to check CI manually, provide PR link |

@@ -21,7 +21,7 @@ pnpm-debug.log*
 # macOS-specific files
 .DS_Store
 
-# claude code local settings
+# claude code local settings and worktrees
 .claude/settings.local.json
 .claude/worktrees/
 
