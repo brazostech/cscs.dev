@@ -2,7 +2,7 @@ import { Text } from "./catalyst/text";
 
 const navigation = {
   main: [
-    { name: "About", href: "#" },
+    { name: "About", href: "/about" },
     { name: "Blog", href: "/blog" },
     { name: "Book Club", href: "/book-club" },
     { name: "Schedule", href: "/schedule" },
