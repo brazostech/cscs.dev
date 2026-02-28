@@ -132,3 +132,13 @@ All components must support dark mode:
 - **Build is static** - all routes generated at build time
 - Uses **npm** (not yarn/pnpm)
 - **TypeScript** enabled with strict mode
+
+## Worktree Workflow (Required)
+
+All new units of work (features, bugfixes, refactors) **must** be performed in a discrete git worktree — never directly in the main working tree.
+
+### Rules
+- Use `EnterWorktree` before beginning any implementation work
+- A `PreToolUse` hook enforces this: edits to project files outside a worktree are **denied**
+- **Exception**: `.claude/` configuration changes (hooks, settings) are allowed in the main tree
+- One worktree per unit of work — keeps changes isolated and reviewable
