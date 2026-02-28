@@ -239,6 +239,10 @@ Posts use `getStaticPaths()` for build-time generation.
 
 All new units of work (features, bugfixes, refactors) **must** be performed in a discrete git worktree — never directly in the main working tree.
 
+### Canonical Directory
+
+Worktrees live in `.claude/worktrees/` (gitignored). `EnterWorktree` creates them here automatically. Example path: `.claude/worktrees/issue-42-add-dark-mode/`.
+
 ### Rules
 
 - Use `EnterWorktree` before beginning any implementation work
