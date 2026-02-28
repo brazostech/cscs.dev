@@ -9,13 +9,13 @@ REPO="brazostech/cscs.dev"
 
 echo "Creating audit issues for $REPO..."
 echo "Checking gh authentication..."
-gh auth status || { echo "ERROR: Run 'gh auth login' first."; exit 1; }
+# gh auth status || { echo "ERROR: Run 'gh auth login' first."; exit 1; }
 echo ""
 
 # --- Issue 1: About page ---
 gh issue create --repo "$REPO" \
   --title "Create About page (placeholder link in footer)" \
-  --label "enhancement" --label "content" \
+  --label "enhancement" \
   --body "$(cat <<'EOF'
 ## Summary
 
@@ -47,7 +47,7 @@ echo "✓ Created: About page"
 # --- Issue 2: Contact page ---
 gh issue create --repo "$REPO" \
   --title "Create Contact page (placeholder link in footer)" \
-  --label "enhancement" --label "content" \
+  --label "enhancement" \
   --body "$(cat <<'EOF'
 ## Summary
 
@@ -79,7 +79,7 @@ echo "✓ Created: Contact page"
 # --- Issue 3: Privacy Policy ---
 gh issue create --repo "$REPO" \
   --title "Create Privacy Policy page (placeholder link in newsletter)" \
-  --label "enhancement" --label "content" \
+  --label "enhancement" \
   --body "$(cat <<'EOF'
 ## Summary
 
@@ -112,7 +112,7 @@ echo "✓ Created: Privacy Policy"
 # --- Issue 4: Hero decorative images ---
 gh issue create --repo "$REPO" \
   --title "Add decorative aria attributes to Hero images" \
-  --label "accessibility" \
+  --label "enhancement" \
   --body "$(cat <<'EOF'
 ## Summary
 
@@ -249,7 +249,7 @@ echo "✓ Created: Newsletter backend"
 # --- Issue 9: Test coverage ---
 gh issue create --repo "$REPO" \
   --title "Expand test coverage beyond EventForm and PocketBase RSVP" \
-  --label "testing" \
+  --label "enhancement" \
   --body "$(cat <<'EOF'
 ## Summary
 
