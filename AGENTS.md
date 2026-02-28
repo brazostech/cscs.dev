@@ -110,20 +110,28 @@ src/
   styles/            # Global CSS
 ```
 
+### Routing
+
+File-based routing in `src/pages/`:
+
+- `/` - Home page with hero, newsletter, footer
+- `/blog` - Blog listing (sorted by date, newest first)
+- `/blog/[slug]` - Individual posts (dynamic routes from content collection)
+
 ### Astro Pages
 
 - Use `.astro` files for pages
-- Import `Layout` from `../layouts/Layout.astro`
+- Import `Layout` from `../layouts/Layout.astro` — accepts `title` and `description` props for SEO
 - Import `Header` and `Footer` for consistent page structure
 - Frontmatter goes between `---` fences at top
 
 ### React Hydration
 
-Use the minimal hydration directive needed:
+Use the minimal hydration directive needed. Prefer static rendering for performance.
 - `client:only="react"` - Auth-dependent components (Header)
-- `client:load` - Interactive on page load
+- `client:load` - Interactive on page load (use sparingly)
 - `client:visible` - Lazy load when scrolled into view
-- No directive - Static, no JavaScript
+- No directive - Static, no JavaScript shipped
 
 ### Catalyst UI Kit
 
@@ -140,6 +148,8 @@ Tailwind CSS v4 with utilities-first approach:
 - Color palette: `zinc` (neutrals) + `indigo` (accent)
 - Container: `max-w-7xl` for layout, `max-w-3xl` for content
 - Spacing: `px-6 lg:px-8` (horizontal), `py-24 sm:py-32` (vertical)
+- Responsive breakpoints: `sm:` (640px), `lg:` (1024px)
+- Typography: Use Catalyst `<Heading>`, `<Text>` components; blog content uses Tailwind Typography (`prose` classes with dark mode)
 
 ### Backend Integration
 
@@ -150,7 +160,20 @@ PocketBase client in `src/lib/pocketbase.ts`:
 
 ## Content Collections
 
-Blog posts in `src/content/blog/` with required frontmatter:
+Blog posts are Markdown files in `src/content/blog/` with Zod schema (defined in `src/content/config.ts`):
+
+```typescript
+{
+  title: string
+  description: string
+  pubDate: Date
+  author: string
+  image?: string
+  tags: string[] (default: [])
+}
+```
+
+Required frontmatter example:
 
 ```markdown
 ---
@@ -162,11 +185,39 @@ tags: ["tag1", "tag2"]
 ---
 ```
 
+Posts use `getStaticPaths()` for build-time generation.
+
+## Key Patterns
+
+### Adding a New Page
+
+1. Create `src/pages/your-page.astro`
+2. Import and use `Layout` wrapper with title/description
+3. Import `Header` and `Footer` for consistency
+4. Use Catalyst components for UI elements
+
+### Adding a Blog Post
+
+1. Create `src/content/blog/your-slug.md`
+2. Add frontmatter with required fields (see schema above)
+3. Write content in Markdown
+4. Build will generate `/blog/your-slug` automatically
+
+### Creating Interactive Components
+
+1. Use `.tsx` files for React components with state/interactivity
+2. Import from `src/components/catalyst/` for UI primitives
+3. Add to Astro pages with appropriate `client:*` directive
+4. Keep components small and focused
+
 ## Important Notes
 
 - **No tests** - Verify changes manually or via build
+- **No backend** - Forms don't submit anywhere yet
+- **Content is Markdown** - Not a CMS or database
 - **Static output** - All routes generated at build time
-- Uses **npm** (not yarn/pnpm)
+- Uses **npm** (not yarn/pnpm) — enforced by deny rules in `.claude/settings.json`
+- **TypeScript** enabled with strict mode
 - PocketBase backend runs separately (see `backend/README.md`)
 
 ## Worktree Workflow (Required)
