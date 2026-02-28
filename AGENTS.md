@@ -15,15 +15,18 @@ npm run preview  # Preview production build
 
 npm run lint     # Run ESLint
 npm run format   # Run Prettier (writes changes)
-```
 
-**No test suite is configured** - vitest is installed but no tests exist yet.
+npm run test          # Run Vitest in watch mode
+npm run test:run      # Run tests once (CI)
+npm run test:coverage # Run tests with v8 coverage
+```
 
 ## Code Style
 
 ### Formatting
 
 Prettier handles formatting via `npm run format`. Configuration:
+
 - Uses `prettier-plugin-astro` for `.astro` files
 - Uses `prettier-plugin-tailwindcss` for class sorting
 - Default Prettier settings (no explicit config for quotes, semicolons, etc.)
@@ -31,6 +34,7 @@ Prettier handles formatting via `npm run format`. Configuration:
 ### Linting
 
 ESLint with TypeScript, Astro, and jsx-a11y plugins. Key rules:
+
 - `@typescript-eslint/no-explicit-any` is disabled
 - Astro recommended + jsx-a11y recommended rules enabled
 - Ignored directories: `.astro/`, `dist/`, `node_modules/`, `backend/`
@@ -38,6 +42,7 @@ ESLint with TypeScript, Astro, and jsx-a11y plugins. Key rules:
 ### TypeScript
 
 Strict mode enabled via `astro/tsconfigs/strict`. React JSX configured.
+
 - Use explicit types for function parameters and return values
 - Interfaces preferred for object shapes (see `EventData`, `AuthUser`)
 - Use `type` for unions and simple type aliases
@@ -66,6 +71,7 @@ Strict mode enabled via `astro/tsconfigs/strict`. React JSX configured.
 ### Dark Mode
 
 All components must support dark mode:
+
 - Add `dark:` variants to Tailwind classes
 - Use zinc color palette for neutrals (works in both modes)
 
@@ -77,7 +83,7 @@ Use try/catch with typed error handling. Display user-friendly messages in UI:
 try {
   await someAsyncOperation();
 } catch (err) {
-  setError(err instanceof Error ? err.message : 'Operation failed');
+  setError(err instanceof Error ? err.message : "Operation failed");
 }
 ```
 
@@ -90,7 +96,11 @@ const [isLoading, setIsLoading] = useState(false);
 async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
   setIsLoading(true);
-  try { await apiCall(); } finally { setIsLoading(false); }
+  try {
+    await apiCall();
+  } finally {
+    setIsLoading(false);
+  }
 }
 ```
 
@@ -108,6 +118,7 @@ src/
   pages/             # File-based routing (app/, blog/)
   stores/            # React state (authStore.ts)
   styles/            # Global CSS
+  test/              # Test setup, mocks, and factories
 ```
 
 ### Routing
@@ -128,6 +139,7 @@ File-based routing in `src/pages/`:
 ### React Hydration
 
 Use the minimal hydration directive needed. Prefer static rendering for performance.
+
 - `client:only="react"` - Auth-dependent components (Header)
 - `client:load` - Interactive on page load (use sparingly)
 - `client:visible` - Lazy load when scrolled into view
@@ -136,6 +148,7 @@ Use the minimal hydration directive needed. Prefer static rendering for performa
 ### Catalyst UI Kit
 
 Located in `src/components/catalyst/`. Use these for consistency:
+
 - `Button` - All buttons (supports `color`, `outline`, `plain` variants)
 - `Input`, `Textarea`, `Select` - Form inputs
 - `Field`, `Label`, `ErrorMessage` - Form field wrappers
@@ -145,6 +158,7 @@ Located in `src/components/catalyst/`. Use these for consistency:
 ### Styling
 
 Tailwind CSS v4 with utilities-first approach:
+
 - Color palette: `zinc` (neutrals) + `indigo` (accent)
 - Container: `max-w-7xl` for layout, `max-w-3xl` for content
 - Spacing: `px-6 lg:px-8` (horizontal), `py-24 sm:py-32` (vertical)
@@ -154,6 +168,7 @@ Tailwind CSS v4 with utilities-first approach:
 ### Backend Integration
 
 PocketBase client in `src/lib/pocketbase.ts`:
+
 - Use `pb.collection('name')` for CRUD operations
 - Auth functions: `login()`, `logout()`, `register()`, `getCurrentUser()`
 - Use `useAuth()` hook in React components for auth state
@@ -212,7 +227,7 @@ Posts use `getStaticPaths()` for build-time generation.
 
 ## Important Notes
 
-- **No tests** - Verify changes manually or via build
+- **Testing** — Run `npm run test:run` to verify changes; see test files in `src/` for patterns
 - **No backend** - Forms don't submit anywhere yet
 - **Content is Markdown** - Not a CMS or database
 - **Static output** - All routes generated at build time
@@ -225,6 +240,7 @@ Posts use `getStaticPaths()` for build-time generation.
 All new units of work (features, bugfixes, refactors) **must** be performed in a discrete git worktree — never directly in the main working tree.
 
 ### Rules
+
 - Use `EnterWorktree` before beginning any implementation work
 - A `PreToolUse` hook enforces this: edits to project files outside a worktree are **denied**
 - **Exception**: `.claude/` configuration changes (hooks, settings) are allowed in the main tree
