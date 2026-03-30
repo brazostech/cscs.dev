@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ScheduleEvents from "../components/ScheduleEvents";
+import CurrentBookBadge from "../components/CurrentBookBadge";
 ---
 
 <Layout
@@ -71,12 +72,7 @@ import ScheduleEvents from "../components/ScheduleEvents";
             <p class="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
               Every Saturday at 2:00 PM CST via Zoom
             </p>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400">
-              Currently reading: <span
-                class="font-medium text-zinc-900 dark:text-white"
-                >The Lean Product Playbook</span
-              > by Dan Olsen
-            </p>
+            <CurrentBookBadge client:load />
             <a
               href="/book-club"
               class="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"

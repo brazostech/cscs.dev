@@ -1,30 +1,30 @@
-import { useState } from 'react';
-import { register, login, requestVerification } from '../lib/pocketbase';
-import { Button } from './catalyst/button';
-import { Field, Label } from './catalyst/fieldset';
-import { Input } from './catalyst/input';
-import { Text } from './catalyst/text';
+import { useState } from "react";
+import { register, login, requestVerification } from "../lib/pocketbase";
+import { Button } from "./catalyst/button";
+import { Field, Label } from "./catalyst/fieldset";
+import { Input } from "./catalyst/input";
+import { Text } from "./catalyst/text";
 
 export default function RegisterForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // Client-side validation
     if (password !== passwordConfirm) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -38,7 +38,7 @@ export default function RegisterForm() {
         password,
         passwordConfirm,
         name: name || undefined,
-        role: 'user',
+        role: "user",
       });
 
       // Send verification email (requires SMTP configured in PocketBase)
@@ -47,17 +47,19 @@ export default function RegisterForm() {
         await requestVerification(email);
       } catch (verifyErr) {
         // Silently fail if SMTP is not configured
-        console.warn('Could not send verification email:', verifyErr);
+        console.warn("Could not send verification email:", verifyErr);
       }
 
       // Automatically log them in after registration
       await login({ email, password });
 
       // Redirect to account page on success
-      window.location.href = '/account';
+      window.location.href = "/account";
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to create account. Please try again.';
+        err instanceof Error
+          ? err.message
+          : "Failed to create account. Please try again.";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -68,7 +70,9 @@ export default function RegisterForm() {
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
         <div className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
-          <Text className="text-sm text-red-700 dark:text-red-300">{error}</Text>
+          <Text className="text-sm text-red-700 dark:text-red-300">
+            {error}
+          </Text>
         </div>
       )}
 
@@ -125,7 +129,7 @@ export default function RegisterForm() {
       </Field>
 
       <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? 'Creating account...' : 'Create account'}
+        {isLoading ? "Creating account..." : "Create account"}
       </Button>
     </form>
   );

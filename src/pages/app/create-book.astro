@@ -1,0 +1,14 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import AppLayout from "../../components/AppLayout";
+import BookFormWrapper from "../../components/BookFormWrapper";
+
+const title = "Book Form";
+const description = "Create or edit a book";
+---
+
+<Layout title={title} description={description}>
+  <AppLayout client:only="react" currentPath="/app/books">
+    <BookFormWrapper client:only="react" />
+  </AppLayout>
+</Layout>

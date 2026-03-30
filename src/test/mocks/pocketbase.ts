@@ -21,7 +21,7 @@
  */
 
 import { vi, type Mock } from "vitest";
-import { type MockUser, type MockRsvp } from "./factories";
+import { type MockUser, type MockRsvp, type MockBook } from "./factories";
 
 export interface CollectionMocks {
   getOne: Mock;
@@ -60,6 +60,8 @@ export interface CreateMockPocketBaseOptions {
   collectionOverrides?: Partial<CollectionMocks>;
   /** Mock RSVPs for testing RSVP functionality */
   rsvps?: MockRsvp[];
+  /** Mock books for testing book club functionality */
+  books?: MockBook[];
 }
 
 /**
@@ -145,6 +147,8 @@ export function createMockPocketBaseModule(
 
   // RSVP mock state
   const rsvps = options.rsvps ?? [];
+  // Book mock state
+  const books = options.books ?? [];
 
   return {
     pb: mockPb,
@@ -209,6 +213,26 @@ export function createMockPocketBaseModule(
           rsvpMap[r.event] = r;
         });
       return Promise.resolve(rsvpMap);
+    }),
+    // Book functions
+    getCurrentBook: vi.fn().mockImplementation(() => {
+      const found = books.find((b: MockBook) => b.status === "reading");
+      return Promise.resolve(found ?? null);
+    }),
+    getCompletedBooks: vi.fn().mockImplementation(() => {
+      return Promise.resolve(
+        books
+          .filter((b: MockBook) => b.status === "completed")
+          .sort((a: MockBook, b: MockBook) => a.sort_order - b.sort_order),
+      );
+    }),
+    getAllBooks: vi.fn().mockImplementation(() => {
+      return Promise.resolve([...books]);
+    }),
+    getBookCoverUrl: vi.fn().mockImplementation((b: MockBook) => {
+      return b.cover_image
+        ? `http://localhost:8080/api/files/pbc_books/${b.id}/${b.cover_image}`
+        : null;
     }),
   };
 }

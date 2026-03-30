@@ -1,0 +1,217 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import AppLayout from "../../components/AppLayout";
+
+const title = "Books";
+const description = "Manage book club books";
+---
+
+<Layout title={title} description={description}>
+  <AppLayout client:only="react" currentPath="/app/books">
+    <div class="space-y-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">
+            Books
+          </h1>
+          <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            Manage book club reading list
+          </p>
+        </div>
+        <a
+          id="add-book-btn"
+          href="/app/create-book"
+          style="display: none;"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500"
+        >
+          <svg
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"></path>
+          </svg>
+          Add Book
+        </a>
+      </div>
+
+      <div id="books-container">
+        <div class="py-12 text-center">
+          <div
+            class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"
+          >
+          </div>
+          <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+            Loading books...
+          </p>
+        </div>
+      </div>
+    </div>
+  </AppLayout>
+
+  <script>
+    import { pb } from "../../lib/pocketbase";
+
+    const user = pb.authStore.model;
+    if (!user) {
+      window.location.href = "/login";
+    }
+
+    const isModerator = user?.role === "moderator";
+
+    interface Book {
+      id: string;
+      title: string;
+      author: string;
+      description: string;
+      cover_image: string;
+      status: string;
+      purchase_link: string;
+      start_date: string;
+      end_date: string;
+      sort_order: number;
+      created: string;
+      updated: string;
+    }
+
+    async function loadBooks() {
+      const container = document.getElementById("books-container");
+      if (!container) return;
+
+      try {
+        const books = await pb.collection("books").getFullList<Book>({
+          sort: "status,-created",
+        });
+
+        if (books.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-12">
+              <svg class="mx-auto h-12 w-12 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <h3 class="mt-2 text-sm font-semibold text-zinc-900 dark:text-white">No books</h3>
+              <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">No books have been added yet.</p>
+            </div>
+          `;
+          return;
+        }
+
+        renderBooks(books);
+      } catch (error) {
+        console.error("Error loading books:", error);
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-semibold text-zinc-900 dark:text-white">Error loading books</h3>
+            <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">${error instanceof Error ? error.message : "Failed to load books"}</p>
+          </div>
+        `;
+      }
+    }
+
+    function getStatusBadge(status: string): string {
+      if (status === "reading") {
+        return `<span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">Reading</span>`;
+      }
+      return `<span class="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">Completed</span>`;
+    }
+
+    function renderBooks(books: Book[]) {
+      const container = document.getElementById("books-container");
+      if (!container) return;
+
+      const moderatorButtons = (bookId: string) =>
+        isModerator
+          ? `
+          <a
+            href="/app/create-book?edit=${bookId}"
+            class="inline-flex items-center rounded-md bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-inset ring-zinc-700/10 hover:bg-zinc-100 dark:bg-zinc-400/10 dark:text-zinc-400 dark:ring-zinc-400/30 dark:hover:bg-zinc-400/20 cursor-pointer"
+          >
+            Edit
+          </a>
+          <button
+            onclick="deleteBook('${bookId}')"
+            class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-700/10 hover:bg-red-100 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/30 dark:hover:bg-red-400/20 cursor-pointer"
+          >
+            Delete
+          </button>
+        `
+          : "";
+
+      const cardsHTML = books
+        .map(
+          (book) => `
+        <div class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-medium text-zinc-900 dark:text-white">${book.title}</h3>
+              <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">by ${book.author}</p>
+            </div>
+            ${getStatusBadge(book.status)}
+          </div>
+          ${book.description ? `<p class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">${book.description}</p>` : ""}
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            <span class="text-xs text-zinc-500 dark:text-zinc-400">
+              Order: ${book.sort_order}
+            </span>
+            <div class="flex items-center gap-2">
+              ${moderatorButtons(book.id)}
+            </div>
+          </div>
+        </div>
+      `,
+        )
+        .join("");
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          ${cardsHTML}
+        </div>
+      `;
+    }
+
+    (window as any).deleteBook = async function (bookId: string) {
+      if (!confirm("Are you sure you want to delete this book?")) {
+        return;
+      }
+
+      try {
+        await pb.collection("books").delete(bookId);
+        loadBooks();
+      } catch (error) {
+        console.error("Error deleting book:", error);
+        alert(
+          "Failed to delete book: " +
+            (error instanceof Error ? error.message : "Unknown error"),
+        );
+      }
+    };
+
+    function waitForContainer() {
+      const container = document.getElementById("books-container");
+      const addBtn = document.getElementById("add-book-btn");
+
+      if (container && addBtn) {
+        if (isModerator) {
+          addBtn.style.display = "inline-flex";
+        }
+        loadBooks();
+      } else {
+        setTimeout(waitForContainer, 50);
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", waitForContainer);
+    } else {
+      waitForContainer();
+    }
+  </script>
+</Layout>

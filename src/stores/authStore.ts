@@ -1,5 +1,10 @@
-import { useState, useEffect } from 'react';
-import { pb, getCurrentUser, onAuthChange, type AuthUser } from '../lib/pocketbase';
+import { useState, useEffect } from "react";
+import {
+  pb,
+  getCurrentUser,
+  onAuthChange,
+  type AuthUser,
+} from "../lib/pocketbase";
 
 // Hook to manage authentication state
 export function useAuth() {
@@ -18,7 +23,7 @@ export function useAuth() {
 
     return () => {
       // Cleanup
-      if (typeof unsubscribe === 'function') {
+      if (typeof unsubscribe === "function") {
         unsubscribe();
       }
     };

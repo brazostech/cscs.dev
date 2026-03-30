@@ -1,10 +1,10 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
-const title = 'Verify Email';
-const description = 'Verify your email address';
+const title = "Verify Email";
+const description = "Verify your email address";
 ---
 
 <Layout title={title} description={description}>
@@ -14,12 +14,26 @@ const description = 'Verify your email address';
       <div class="mx-auto max-w-2xl">
         <div id="verification-container" class="text-center">
           <div class="mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 mb-4">
-              <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <div
+              class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30"
+            >
+              <svg
+                class="h-8 w-8 text-indigo-600 dark:text-indigo-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                ></path>
               </svg>
             </div>
-            <h1 class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+            <h1
+              class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white"
+            >
               Verifying your email...
             </h1>
             <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
@@ -28,7 +42,10 @@ const description = 'Verify your email address';
           </div>
 
           <div class="mt-8">
-            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"></div>
+            <div
+              class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"
+            >
+            </div>
           </div>
         </div>
       </div>
@@ -38,15 +55,15 @@ const description = 'Verify your email address';
   </div>
 
   <script>
-    import { pb } from '../lib/pocketbase';
+    import { pb } from "../lib/pocketbase";
 
     async function verifyEmail() {
-      const container = document.getElementById('verification-container');
+      const container = document.getElementById("verification-container");
       if (!container) return;
 
       // Get token from URL query parameters
       const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
+      const token = urlParams.get("token");
 
       if (!token) {
         container.innerHTML = `
@@ -74,7 +91,7 @@ const description = 'Verify your email address';
 
       try {
         // Verify the email using the token
-        await pb.collection('users').confirmVerification(token);
+        await pb.collection("users").confirmVerification(token);
 
         // Success!
         container.innerHTML = `
@@ -103,7 +120,7 @@ const description = 'Verify your email address';
           </div>
         `;
       } catch (error) {
-        console.error('Verification error:', error);
+        console.error("Verification error:", error);
 
         container.innerHTML = `
           <div class="text-center">
@@ -117,7 +134,7 @@ const description = 'Verify your email address';
                 Verification Failed
               </h1>
               <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-                ${error instanceof Error ? error.message : 'The verification link may have expired or is invalid. Please try requesting a new verification email.'}
+                ${error instanceof Error ? error.message : "The verification link may have expired or is invalid. Please try requesting a new verification email."}
               </p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">

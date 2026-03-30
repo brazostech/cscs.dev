@@ -82,7 +82,9 @@ export default function Header() {
                 alt={user?.name || user?.email || "User"}
                 className="size-6 bg-indigo-600 text-white"
               />
-              <span className="max-w-[120px] truncate">{user?.name || user?.email}</span>
+              <span className="max-w-[120px] truncate">
+                {user?.name || user?.email}
+              </span>
             </a>
           ) : (
             <div className="flex items-center gap-x-2">

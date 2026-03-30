@@ -12,14 +12,14 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 
 ## Project Stats
 
-| Metric | Count |
-|--------|-------|
-| Pages | 13 (5 public, 8 authenticated/app) |
-| React Components | 12 custom + 28 Catalyst UI Kit |
-| Blog Posts | 3 published |
-| Test Files | 2 (EventForm: 50+ tests, PocketBase RSVP) |
-| NPM Scripts | 13 |
-| CI Pipeline Steps | 6 (lint, format, test, build, storybook) |
+| Metric            | Count                                     |
+| ----------------- | ----------------------------------------- |
+| Pages             | 13 (5 public, 8 authenticated/app)        |
+| React Components  | 12 custom + 28 Catalyst UI Kit            |
+| Blog Posts        | 3 published                               |
+| Test Files        | 2 (EventForm: 50+ tests, PocketBase RSVP) |
+| NPM Scripts       | 13                                        |
+| CI Pipeline Steps | 6 (lint, format, test, build, storybook)  |
 
 ---
 
@@ -43,16 +43,19 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 ### HIGH — Broken Links / Placeholder Pages
 
 #### 1. Footer "About" link is a placeholder
+
 - **File**: `src/components/Footer.tsx:5`
 - **Issue**: `href: "#"` — navigates nowhere
 - **Fix**: Create `/about` page, update link
 
 #### 2. Footer "Contact" link is a placeholder
+
 - **File**: `src/components/Footer.tsx:9`
 - **Issue**: `href: "#"` — navigates nowhere
 - **Fix**: Create `/contact` page, update link
 
 #### 3. Newsletter "privacy policy" link is a placeholder
+
 - **File**: `src/components/Newsletter.tsx:92`
 - **Issue**: `href="#"` — text says "Read our privacy policy" but links nowhere
 - **Fix**: Create `/privacy` page, update link. Especially important since the site collects emails and has user registration.
@@ -60,6 +63,7 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 ### HIGH — Functionality Gaps
 
 #### 4. Newsletter form may not work in production
+
 - **File**: `src/components/Newsletter.tsx:67`
 - **Issue**: Uses `data-netlify="true"` for Netlify Forms, but the site infrastructure uses Podman/PocketBase — no evidence of Netlify deployment. Form submissions may silently fail.
 - **Fix**: Integrate with PocketBase (newsletter collection) or a third-party email service. Verify form submissions are actually captured.
@@ -67,21 +71,25 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 ### MEDIUM — Code Quality
 
 #### 5. Hero images lack proper decorative attributes
+
 - **File**: `src/components/Hero.tsx:132,142,150,160,168`
 - **Issue**: 5 Unsplash images have `alt=""` but no `role="presentation"` or `aria-hidden="true"` to explicitly mark as decorative.
 - **Fix**: Add `role="presentation" aria-hidden="true"` to each decorative image.
 
 #### 6. Copyright year is hardcoded
+
 - **File**: `src/components/Footer.tsx:90`
 - **Issue**: `© 2025 College Station Computer Science` — will be stale in future years
 - **Fix**: Use `{new Date().getFullYear()}` for dynamic year
 
 #### 7. Catalyst link component TODO not resolved
+
 - **File**: `src/components/catalyst/link.tsx:2`
 - **Issue**: `// TODO: Update this component to use your client-side framework's link`
 - **Fix**: Since this is a static Astro site, remove the TODO or document that `<a>` tags are the correct approach.
 
 #### 8. Field naming inconsistency: `time_zone` vs `timeZone`
+
 - **Referenced in**: `IMPROVEMENTS.md` Phase 3 backlog
 - **Issue**: PocketBase uses `time_zone` (snake_case) while JS convention is `timeZone` (camelCase). No clear mapping layer.
 - **Fix**: Standardize naming and add explicit mapping in `src/lib/pocketbase.ts`
@@ -89,6 +97,7 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 ### MEDIUM — Testing
 
 #### 9. Limited test coverage
+
 - **Current**: Only `EventForm.test.tsx` (50+ tests) and `pocketbase.test.ts` (RSVP functions)
 - **Missing**: LoginForm, RegisterForm, AccountDashboard, Header, ScheduleEvents, Newsletter, Footer
 - **Fix**: Prioritize tests for auth components (LoginForm, RegisterForm) and ScheduleEvents
@@ -96,11 +105,13 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 ### MEDIUM — Documentation
 
 #### 10. CLAUDE.md says "No test suite configured" — inaccurate
+
 - **File**: `CLAUDE.md`
 - **Issue**: States "No test suite is configured" and "No test infrastructure — manual testing required." This is outdated — the project has Vitest, React Testing Library, 50+ tests, and CI-integrated testing.
 - **Fix**: Update CLAUDE.md with test commands and remove the outdated notes.
 
 #### 11. CLAUDE.md missing auth, events, and app page documentation
+
 - **File**: `CLAUDE.md`
 - **Issue**: Documents the original static site but not: login/register/account pages, PocketBase integration, auth store, EventForm, ScheduleEvents, AppLayout, Storybook, container setup.
 - **Fix**: Add sections for backend integration, auth architecture, new pages, and new components.
@@ -108,14 +119,17 @@ Comprehensive audit of the CSCS community website (cscs.dev) covering project he
 ### LOW — Enhancements
 
 #### 12. No RSS feed for blog
+
 - **Issue**: Blog has 3 posts and content collections but no RSS feed
 - **Fix**: Install `@astrojs/rss`, create `src/pages/rss.xml.ts`, add autodiscovery `<link>` tag
 
 #### 13. No web analytics
+
 - **Issue**: No tracking configured (Google Analytics, Plausible, etc.)
 - **Fix**: Choose privacy-friendly analytics, add to Layout, update privacy policy
 
 #### 14. No deployment documentation or CI/CD deploy step
+
 - **Issue**: `astro.config.mjs` sets site to `https://cscs.dev` but there's no hosting configuration, no deploy step in CI, and no production environment docs.
 - **Fix**: Document production hosting, add CI deploy step, document environment variable management.
 

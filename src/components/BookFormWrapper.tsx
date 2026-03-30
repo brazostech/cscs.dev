@@ -1,19 +1,16 @@
 import { useEffect, useState } from "react";
-import EventForm from "./EventForm";
+import BookForm from "./BookForm";
 
-export default function EventFormWrapper() {
-  const [eventId, setEventId] = useState<string | undefined>(undefined);
+export default function BookFormWrapper() {
+  const [bookId, setBookId] = useState<string | undefined>(undefined);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Read the edit ID from URL on client side
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get("edit");
 
-    console.log("EventFormWrapper: editId from URL:", editId);
-
     if (editId) {
-      setEventId(editId);
+      setBookId(editId);
     }
     setIsReady(true);
   }, []);
@@ -33,15 +30,15 @@ export default function EventFormWrapper() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-          {eventId ? "Edit Event" : "Create Event"}
+          {bookId ? "Edit Book" : "Add Book"}
         </h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          {eventId ? "Update event details" : "Add a new event to the schedule"}
+          {bookId ? "Update book details" : "Add a new book to the book club"}
         </p>
       </div>
 
       <div className="max-w-2xl">
-        <EventForm eventId={eventId} />
+        <BookForm bookId={bookId} />
       </div>
     </div>
   );

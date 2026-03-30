@@ -216,3 +216,62 @@ export async function getUserEventRsvps(
   });
   return rsvpMap;
 }
+
+// ============================================
+// Book Club Functions
+// ============================================
+
+export interface BookData {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  cover_image: string;
+  status: "reading" | "completed";
+  purchase_link: string;
+  start_date: string;
+  end_date: string;
+  sort_order: number;
+  created: string;
+  updated: string;
+}
+
+/**
+ * Get the currently-reading book (expects 0 or 1 result).
+ */
+export async function getCurrentBook(): Promise<BookData | null> {
+  try {
+    return await pb
+      .collection("books")
+      .getFirstListItem<BookData>('status="reading"');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get all completed books, ordered by sort_order then end_date descending.
+ */
+export async function getCompletedBooks(): Promise<BookData[]> {
+  return await pb.collection("books").getFullList<BookData>({
+    filter: 'status="completed"',
+    sort: "sort_order,-end_date",
+  });
+}
+
+/**
+ * Get all books (for admin management).
+ */
+export async function getAllBooks(): Promise<BookData[]> {
+  return await pb.collection("books").getFullList<BookData>({
+    sort: "-created",
+  });
+}
+
+/**
+ * Get the cover image URL for a book.
+ */
+export function getBookCoverUrl(book: BookData): string | null {
+  if (!book.cover_image) return null;
+  return pb.files.getURL(book, book.cover_image);
+}

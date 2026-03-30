@@ -9,10 +9,13 @@ export {
   createMockEvents,
   createMockRsvp,
   createMockRsvps,
+  createMockBook,
+  createMockBooks,
   resetFactoryCounters,
   type MockEvent,
   type MockUser,
   type MockRsvp,
+  type MockBook,
 } from "./factories";
 
 export {

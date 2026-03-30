@@ -25,7 +25,14 @@ services:
       # For now, defaults are fine
       - TZ=UTC
     # Override CMD to explicitly use mounted volumes for data and migrations
-    command: ["pocketbase", "serve", "--http=0.0.0.0:8080", "--dir=/pb_data", "--migrationsDir=/pb_migrations"]
+    command:
+      [
+        "pocketbase",
+        "serve",
+        "--http=0.0.0.0:8080",
+        "--dir=/pb_data",
+        "--migrationsDir=/pb_migrations",
+      ]
     restart: unless-stopped
 
   cscs:
