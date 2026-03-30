@@ -175,6 +175,10 @@ The site uses Tailwind CSS v4 with a consistent design system:
 
 All Catalyst components include dark mode support by default.
 
+## For AI Agents
+
+See [CLAUDE.md](./CLAUDE.md) for coding conventions and workflow requirements.
+
 ## Learn More
 
 - [Astro Documentation](https://docs.astro.build)
