@@ -218,7 +218,7 @@ export default function BookClubPage() {
                               by {book.author}
                             </p>
                             {book.description && (
-                              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                              <p className="line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
                                 {book.description}
                               </p>
                             )}
