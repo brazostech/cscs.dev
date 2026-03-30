@@ -141,7 +141,8 @@ const description = "View and RSVP to upcoming events";
       if (!container) return;
 
       const eventsHTML = events.map((event) => {
-        const eventDate = new Date(event.date);
+        const [yr, mo, dy] = event.date.split("-").map(Number);
+        const eventDate = new Date(yr, mo - 1, dy);
         const formattedDate = eventDate.toLocaleDateString("en-US", {
           weekday: "short",
           year: "numeric",
