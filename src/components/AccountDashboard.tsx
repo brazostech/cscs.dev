@@ -1,18 +1,22 @@
-import { useAuth } from '../stores/authStore';
-import { logout } from '../lib/pocketbase';
-import { Button } from './catalyst/button';
-import { Heading, Subheading } from './catalyst/heading';
-import { Text } from './catalyst/text';
-import { DescriptionList, DescriptionTerm, DescriptionDetails } from './catalyst/description-list';
-import { Divider } from './catalyst/divider';
-import { Badge } from './catalyst/badge';
+import { useAuth } from "../stores/authStore";
+import { logout } from "../lib/pocketbase";
+import { Button } from "./catalyst/button";
+import { Heading, Subheading } from "./catalyst/heading";
+import { Text } from "./catalyst/text";
+import {
+  DescriptionList,
+  DescriptionTerm,
+  DescriptionDetails,
+} from "./catalyst/description-list";
+import { Divider } from "./catalyst/divider";
+import { Badge } from "./catalyst/badge";
 
 export default function AccountDashboard() {
   const { user, isLoading } = useAuth();
 
   async function handleLogout() {
     await logout();
-    window.location.href = '/';
+    window.location.href = "/";
   }
 
   if (isLoading) {
@@ -25,8 +29,8 @@ export default function AccountDashboard() {
 
   if (!user) {
     // Redirect to login if not authenticated
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
     }
     return null;
   }
@@ -37,8 +41,8 @@ export default function AccountDashboard() {
         <div className="flex items-center gap-3">
           <Heading>Account Dashboard</Heading>
           {user.role && (
-            <Badge color={user.role === 'moderator' ? 'indigo' : 'zinc'}>
-              {user.role === 'moderator' ? 'Moderator' : 'User'}
+            <Badge color={user.role === "moderator" ? "indigo" : "zinc"}>
+              {user.role === "moderator" ? "Moderator" : "User"}
             </Badge>
           )}
         </div>
@@ -66,25 +70,29 @@ export default function AccountDashboard() {
           <DescriptionTerm>Account Status</DescriptionTerm>
           <DescriptionDetails>
             {user.verified ? (
-              <span className="text-green-600 dark:text-green-400">Verified</span>
+              <span className="text-green-600 dark:text-green-400">
+                Verified
+              </span>
             ) : (
-              <span className="text-yellow-600 dark:text-yellow-400">Not Verified</span>
+              <span className="text-yellow-600 dark:text-yellow-400">
+                Not Verified
+              </span>
             )}
           </DescriptionDetails>
 
           <DescriptionTerm>Member Since</DescriptionTerm>
           <DescriptionDetails>
-            {new Date(user.created).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+            {new Date(user.created).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
           </DescriptionDetails>
         </DescriptionList>
 
         <Divider className="my-8" />
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <Button href="/app" color="indigo">
             Go to App
           </Button>

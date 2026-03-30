@@ -1,28 +1,30 @@
-import { useState } from 'react';
-import { login } from '../lib/pocketbase';
-import { Button } from './catalyst/button';
-import { Field, Label } from './catalyst/fieldset';
-import { Input } from './catalyst/input';
-import { Text } from './catalyst/text';
+import { useState } from "react";
+import { login } from "../lib/pocketbase";
+import { Button } from "./catalyst/button";
+import { Field, Label } from "./catalyst/fieldset";
+import { Input } from "./catalyst/input";
+import { Text } from "./catalyst/text";
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
       await login({ email, password });
       // Redirect to account page on success
-      window.location.href = '/account';
+      window.location.href = "/account";
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to login. Please check your credentials.',
+        err instanceof Error
+          ? err.message
+          : "Failed to login. Please check your credentials.",
       );
     } finally {
       setIsLoading(false);
@@ -33,7 +35,9 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
         <div className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
-          <Text className="text-sm text-red-700 dark:text-red-300">{error}</Text>
+          <Text className="text-sm text-red-700 dark:text-red-300">
+            {error}
+          </Text>
         </div>
       )}
 
@@ -62,7 +66,7 @@ export default function LoginForm() {
       </Field>
 
       <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? 'Signing in...' : 'Sign in'}
+        {isLoading ? "Signing in..." : "Sign in"}
       </Button>
     </form>
   );

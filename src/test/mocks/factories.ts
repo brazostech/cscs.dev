@@ -43,9 +43,25 @@ export interface MockRsvp {
   };
 }
 
+export interface MockBook {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  cover_image: string;
+  status: "reading" | "completed";
+  purchase_link: string;
+  start_date: string;
+  end_date: string;
+  sort_order: number;
+  created: string;
+  updated: string;
+}
+
 let eventCounter = 0;
 let userCounter = 0;
 let rsvpCounter = 0;
+let bookCounter = 0;
 
 /**
  * Create a mock event with sensible defaults.
@@ -144,10 +160,46 @@ export function createMockRsvps(
 }
 
 /**
+ * Create a mock book with sensible defaults.
+ * All properties can be overridden.
+ */
+export function createMockBook(overrides?: Partial<MockBook>): MockBook {
+  bookCounter++;
+  const now = new Date().toISOString();
+
+  return {
+    id: `book_${bookCounter}_${Math.random().toString(36).substring(2, 7)}`,
+    title: `Test Book ${bookCounter}`,
+    author: `Test Author ${bookCounter}`,
+    description: "A test book description.",
+    cover_image: "",
+    status: "completed",
+    purchase_link: "",
+    start_date: "2026-01-01",
+    end_date: "2026-02-01",
+    sort_order: bookCounter,
+    created: now,
+    updated: now,
+    ...overrides,
+  };
+}
+
+/**
+ * Create multiple mock books.
+ */
+export function createMockBooks(
+  count: number,
+  overrides?: Partial<MockBook>,
+): MockBook[] {
+  return Array.from({ length: count }, () => createMockBook(overrides));
+}
+
+/**
  * Reset counters between test suites if needed.
  */
 export function resetFactoryCounters(): void {
   eventCounter = 0;
   userCounter = 0;
   rsvpCounter = 0;
+  bookCounter = 0;
 }

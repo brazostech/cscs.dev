@@ -41,7 +41,10 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y podman
 
-echo "net.ipv4.ip_unprivileged_port_start=80" > /etc/sysctl.d/ports.conf
+cat > /etc/sysctl.d/99-cscs-podman.conf <<SYSCTL
+net.ipv4.ip_unprivileged_port_start=80
+net.ipv4.ip_forward=1
+SYSCTL
 sysctl --system
 
 echo "Authenticating to Artifact Registry..."

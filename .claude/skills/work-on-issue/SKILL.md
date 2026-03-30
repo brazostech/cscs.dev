@@ -109,11 +109,13 @@ Use the appropriate type: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `c
 
 ```markdown
 ## Summary
+
 - <1-3 bullet points describing the changes>
 
 Closes #$ARGUMENTS
 
 ## Test plan
+
 - [ ] `npm run build` passes
 - [ ] `npm run lint` passes
 - [ ] Manual verification of <specific things to check>
@@ -130,6 +132,7 @@ Generated with [Claude Code](https://claude.com/claude-code)
 After the PR is created, wait for CI checks to complete and fix any failures.
 
 1. Watch for CI completion:
+
    ```
    gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --watch
    ```
@@ -138,13 +141,17 @@ After the PR is created, wait for CI checks to complete and fix any failures.
 
 3. **If any check fails** (max 3 fix attempts):
    a. Identify failures:
-      ```
-      gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --json name,state,bucket
-      ```
+
+   ```
+   gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --json name,state,bucket
+   ```
+
    b. Get failure logs:
-      ```
-      gh run view <run-id> --repo The-Read-Onlys/cscs.dev --log-failed
-      ```
+
+   ```
+   gh run view <run-id> --repo The-Read-Onlys/cscs.dev --log-failed
+   ```
+
    c. Fix the failures in the worktree.
    d. Re-run Step 6 (Verify) locally to confirm the fix.
    e. Stage specific files, commit with a message like `fix: resolve CI failure in <check-name>`, and push.
@@ -165,13 +172,13 @@ Ask the user: "Should I close issue #$ARGUMENTS now, or let the PR merge close i
 
 ## Error Handling
 
-| Scenario | Action |
-|---|---|
-| Issue not found | Stop immediately, tell the user |
-| Worktree name conflict | Ask user for alternative name |
-| Build fails | Fix errors, re-run build |
-| Lint fails | Fix errors, re-run lint |
-| Push rejected | Pull with rebase, resolve conflicts, push again |
-| PR already exists for branch | Show existing PR URL, ask user how to proceed |
-| CI check fails | Inspect logs, fix errors, push fix, re-monitor (max 3 attempts) |
-| CI monitoring timeout | Tell user to check CI manually, provide PR link |
+| Scenario                     | Action                                                          |
+| ---------------------------- | --------------------------------------------------------------- |
+| Issue not found              | Stop immediately, tell the user                                 |
+| Worktree name conflict       | Ask user for alternative name                                   |
+| Build fails                  | Fix errors, re-run build                                        |
+| Lint fails                   | Fix errors, re-run lint                                         |
+| Push rejected                | Pull with rebase, resolve conflicts, push again                 |
+| PR already exists for branch | Show existing PR URL, ask user how to proceed                   |
+| CI check fails               | Inspect logs, fix errors, push fix, re-monitor (max 3 attempts) |
+| CI monitoring timeout        | Tell user to check CI manually, provide PR link                 |

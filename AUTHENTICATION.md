@@ -34,6 +34,7 @@ podman-compose up
 ```
 
 This will:
+
 - Start PocketBase on `http://localhost:8080`
 - Start the Astro dev server on `http://localhost:4321`
 - Client-side code will automatically connect to `http://localhost:8080`
@@ -53,6 +54,7 @@ cp .env.example .env
 ```
 
 Add to `.env`:
+
 ```env
 PUBLIC_POCKETBASE_URL=http://localhost:8080
 ```
@@ -219,6 +221,7 @@ Alternatively, you can manually verify users via Admin Dashboard (Collections â†
 SendGrid wraps all email links with click tracking URLs (e.g., `url8394.cscs.dev`). This is normal behavior and the link will redirect to the actual verification URL after tracking.
 
 To disable link tracking (optional):
+
 1. Login to SendGrid dashboard
 2. Go to Settings â†’ Tracking
 3. Disable "Click Tracking"

@@ -5,17 +5,20 @@ This guide explains how to set up Role-Based Access Control for the CSCS.dev sit
 ## User Roles
 
 ### 1. Super Admins (PocketBase Admins)
+
 - **Access**: https://api.cscs.dev/_/ (Admin Dashboard)
 - **Purpose**: Full system administration, manage collections, migrations, settings
 - **Authentication**: Separate from regular users
 - **Create**: `pocketbase admin create email@example.com password`
 
 ### 2. Regular Users (users collection)
+
 - **Access**: Frontend login at https://cscs.dev/login
 - **Default role**: `user`
 - **Permissions**: View events, RSVP to events, manage own profile
 
 ### 3. Moderators (users with role="moderator")
+
 - **Access**: Frontend login (same as regular users)
 - **Permissions**: All regular user permissions + create/edit/delete events
 - **Upgrade**: Super admin changes user's `role` field to "moderator" via dashboard
@@ -24,7 +27,7 @@ This guide explains how to set up Role-Based Access Control for the CSCS.dev sit
 
 ### Step 1: Add role field to users collection
 
-1. Open Admin Dashboard: http://localhost:8080/_/
+1. Open Admin Dashboard: http://localhost:8080/\_/
 2. Go to Collections → users
 3. Click "Edit" on the users collection
 4. Add new field:
@@ -97,6 +100,7 @@ user = @request.auth.id
 ## Making a User a Moderator
 
 ### Via Admin Dashboard (Recommended)
+
 1. Login to https://api.cscs.dev/_/
 2. Go to Collections → users
 3. Find the user
@@ -105,6 +109,7 @@ user = @request.auth.id
 6. Save
 
 ### Via CLI (if needed)
+
 ```bash
 # SSH into production server
 ssh -i ~/.ssh/id_rsa jackvincenthall@34.67.31.86
@@ -118,10 +123,10 @@ sudo podman exec pocketbase-pocketbase pocketbase admin update USER_EMAIL --role
 ### Check if user is moderator (TypeScript)
 
 ```typescript
-import { pb } from './lib/pocketbase';
+import { pb } from "./lib/pocketbase";
 
 // Check current user role
-const isModerator = pb.authStore.model?.role === 'moderator';
+const isModerator = pb.authStore.model?.role === "moderator";
 
 // Show/hide moderator features
 if (isModerator) {
@@ -133,19 +138,17 @@ if (isModerator) {
 ### Example: Conditional UI rendering
 
 ```tsx
-import { useAuth } from '../stores/authStore';
+import { useAuth } from "../stores/authStore";
 
 function EventsList() {
   const { user } = useAuth();
-  const isModerator = user?.role === 'moderator';
+  const isModerator = user?.role === "moderator";
 
   return (
     <div>
-      {isModerator && (
-        <button onClick={createEvent}>Create New Event</button>
-      )}
+      {isModerator && <button onClick={createEvent}>Create New Event</button>}
 
-      {events.map(event => (
+      {events.map((event) => (
         <div key={event.id}>
           <h3>{event.title}</h3>
           {isModerator && (

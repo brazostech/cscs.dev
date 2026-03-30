@@ -1,43 +1,46 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import AppLayout from '../../components/AppLayout';
+import Layout from "../../layouts/Layout.astro";
+import AppLayout from "../../components/AppLayout";
 
-const title = 'Dashboard';
-const description = 'App dashboard';
+const title = "Dashboard";
+const description = "App dashboard";
 ---
 
 <Layout title={title} description={description}>
   <AppLayout client:only="react" currentPath="/app/dashboard">
     <div id="dashboard-content">
-      <div class="text-center py-12">
-        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"></div>
+      <div class="py-12 text-center">
+        <div
+          class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"
+        >
+        </div>
         <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">Loading...</p>
       </div>
     </div>
   </AppLayout>
 
   <script>
-    import { pb } from '../../lib/pocketbase';
+    import { pb } from "../../lib/pocketbase";
 
     function loadDashboard() {
-      console.log('loadDashboard called');
-      const container = document.getElementById('dashboard-content');
-      console.log('container:', container);
+      console.log("loadDashboard called");
+      const container = document.getElementById("dashboard-content");
+      console.log("container:", container);
       if (!container) {
-        console.error('Container not found!');
+        console.error("Container not found!");
         return;
       }
 
       const user = pb.authStore.model;
-      console.log('user:', user);
+      console.log("user:", user);
 
       if (!user) {
-        console.log('No user, redirecting to login');
-        window.location.href = '/login';
+        console.log("No user, redirecting to login");
+        window.location.href = "/login";
         return;
       }
 
-      console.log('user.verified:', user.verified);
+      console.log("user.verified:", user.verified);
 
       // Build dashboard content
       let dashboardHTML = '<div class="space-y-8">';
@@ -98,54 +101,54 @@ const description = 'App dashboard';
             </svg>
             <h3 class="mt-2 text-sm font-semibold text-zinc-900 dark:text-white">No upcoming events</h3>
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              ${user.verified ? 'Visit the Events page to RSVP to events.' : 'Verify your email to RSVP to events.'}
+              ${user.verified ? "Visit the Events page to RSVP to events." : "Verify your email to RSVP to events."}
             </p>
-            ${user.verified ? '<a href="/app/events" class="mt-4 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">Browse Events →</a>' : ''}
+            ${user.verified ? '<a href="/app/events" class="mt-4 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">Browse Events →</a>' : ""}
           </div>
         </div>
       `;
 
-      dashboardHTML += '</div>';
+      dashboardHTML += "</div>";
 
       // Render dashboard
       container.innerHTML = dashboardHTML;
     }
 
     // Make resend function available globally
-    (window as any).resendVerification = async function() {
-      const btn = document.getElementById('resend-btn');
-      const messageDiv = document.getElementById('resend-message');
+    (window as any).resendVerification = async function () {
+      const btn = document.getElementById("resend-btn");
+      const messageDiv = document.getElementById("resend-message");
       if (!btn || !messageDiv) return;
 
       const user = pb.authStore.model;
       if (!user) return;
 
-      btn.setAttribute('disabled', 'true');
-      btn.textContent = 'Sending...';
+      btn.setAttribute("disabled", "true");
+      btn.textContent = "Sending...";
 
       try {
-        await pb.collection('users').requestVerification(user.email);
+        await pb.collection("users").requestVerification(user.email);
         messageDiv.innerHTML = `
           <p class="text-sm text-green-600 dark:text-green-400">
             ✓ Verification email sent! Check your inbox.
           </p>
         `;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (_error) {
         messageDiv.innerHTML = `
           <p class="text-sm text-red-600 dark:text-red-400">
             Failed to send verification email. Please try again later.
           </p>
         `;
-        btn.removeAttribute('disabled');
-        btn.textContent = 'Resend Verification Email';
+        btn.removeAttribute("disabled");
+        btn.textContent = "Resend Verification Email";
       }
     };
 
     // Load dashboard when page loads
     // Use setTimeout to ensure React component has rendered
     function waitForContainer() {
-      const container = document.getElementById('dashboard-content');
+      const container = document.getElementById("dashboard-content");
       if (container) {
         loadDashboard();
       } else {
@@ -154,8 +157,8 @@ const description = 'App dashboard';
       }
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', waitForContainer);
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", waitForContainer);
     } else {
       waitForContainer();
     }
