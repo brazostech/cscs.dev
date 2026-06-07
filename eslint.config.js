@@ -1,8 +1,23 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-import storybook from "eslint-plugin-storybook";
-
 import eslintPluginAstro from "eslint-plugin-astro";
 import tseslint from "typescript-eslint";
+
+async function loadStorybookConfig() {
+  try {
+    const storybook = await import("eslint-plugin-storybook");
+    return storybook.default.configs["flat/recommended"];
+  } catch (error) {
+    if (
+      error?.code === "ERR_MODULE_NOT_FOUND" &&
+      error?.message?.includes("eslint-plugin-storybook")
+    ) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+const storybookConfig = await loadStorybookConfig();
 
 export default [
   {
@@ -24,5 +39,5 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
-  ...storybook.configs["flat/recommended"],
+  ...storybookConfig,
 ];
