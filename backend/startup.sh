@@ -17,6 +17,20 @@ if [ ! -f /swapfile ]; then
 fi
 # ------------------------
 
+# 2b. Keep the boot disk from filling up
+# The original 10GB boot disk filled in 2026 (journal + snapd download
+# cache); once full, SSH key provisioning and image pulls failed.
+mkdir -p /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/99-cscs-size.conf <<JOURNALD
+[Journal]
+SystemMaxUse=200M
+SystemKeepFree=1G
+JOURNALD
+systemctl restart systemd-journald
+# snapd keeps full copies of downloaded snaps (google-cloud-cli is ~400MB
+# each) in its cache; installed revisions are unaffected by clearing it.
+find /var/lib/snapd/cache -type f -delete 2>/dev/null || true
+
 # 3. Format and Mount the Persistent Disk
 DISK_ID="/dev/disk/by-id/google-pod-data-disk"
 MOUNT_POINT="/mnt/pod-data"
@@ -40,6 +54,7 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y podman
+apt-get clean
 
 cat > /etc/sysctl.d/99-cscs-podman.conf <<SYSCTL
 net.ipv4.ip_unprivileged_port_start=80
