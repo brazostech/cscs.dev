@@ -63,7 +63,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 src/
   components/         # React components
     catalyst/         # UI kit — don't modify, use as-is
-  content/blog/       # Markdown blog posts (Zod schema in content/config.ts)
+  content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
   lib/                # PocketBase client and helpers (pocketbase.ts)
   pages/              # File-based routing
