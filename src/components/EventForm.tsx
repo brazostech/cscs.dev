@@ -32,6 +32,47 @@ interface RecurrenceOptions {
   occurrences: number;
 }
 
+interface CreatedEvent {
+  id: string;
+  date: string;
+}
+
+/**
+ * Delete records created earlier in a failed series.
+ * Tries every record even if one delete fails.
+ *
+ * @returns The records that could not be deleted
+ */
+async function deleteCreated(created: CreatedEvent[]): Promise<CreatedEvent[]> {
+  const remaining: CreatedEvent[] = [];
+  for (const event of created) {
+    try {
+      await pb.collection("events").delete(event.id);
+    } catch {
+      remaining.push(event);
+    }
+  }
+  return remaining;
+}
+
+function describeSeriesFailure(
+  failedNumber: number,
+  total: number,
+  reason: string,
+  createdCount: number,
+  remaining: CreatedEvent[],
+): string {
+  const base = `Failed to create event ${failedNumber} of ${total}: ${reason}.`;
+  if (createdCount === 0) {
+    return `${base} No events were created.`;
+  }
+  if (remaining.length === 0) {
+    return `${base} The ${createdCount} event(s) already created were removed, so nothing was saved. Please try again.`;
+  }
+  const list = remaining.map((e) => `${e.date} (id ${e.id})`).join(", ");
+  return `${base} Cleanup failed: ${remaining.length} of ${createdCount} already-created events could not be removed and still exist: ${list}. Delete them from the events list before retrying.`;
+}
+
 export default function EventForm({
   eventId,
   onSuccess,
@@ -105,14 +146,33 @@ export default function EventForm({
           recurrence.occurrences,
         );
 
+        const created: { id: string; date: string }[] = [];
         for (let i = 0; i < dates.length; i++) {
           const eventData = {
             ...formData,
             date: dates[i],
             series_id: seriesId,
           };
-          await pb.collection("events").create(eventData);
-          setCreatedCount(i + 1);
+          try {
+            const record = await pb.collection("events").create(eventData);
+            created.push({ id: record.id, date: dates[i] });
+            setCreatedCount(i + 1);
+          } catch (err) {
+            const reason =
+              err instanceof Error ? err.message : "Failed to save event";
+            const remaining = await deleteCreated(created);
+            setCreatedCount(0);
+            setError(
+              describeSeriesFailure(
+                i + 1,
+                dates.length,
+                reason,
+                created.length,
+                remaining,
+              ),
+            );
+            return;
+          }
         }
       } else {
         // Create single event

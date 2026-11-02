@@ -19,6 +19,7 @@ import { createMockEvent } from "../test/mocks";
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockGetOne = vi.fn();
+const mockDelete = vi.fn();
 
 vi.mock("../lib/pocketbase", () => ({
   pb: {
@@ -26,6 +27,7 @@ vi.mock("../lib/pocketbase", () => ({
       create: mockCreate,
       update: mockUpdate,
       getOne: mockGetOne,
+      delete: mockDelete,
     })),
   },
 }));
@@ -41,6 +43,7 @@ describe("EventForm", () => {
       Promise.resolve({ id, ...data }),
     );
     mockGetOne.mockRejectedValue(new Error("Not found"));
+    mockDelete.mockResolvedValue(true);
   });
 
   // ============================================
@@ -564,6 +567,93 @@ describe("EventForm", () => {
         expect(submitButton).not.toBeDisabled();
         expect(submitButton).toHaveTextContent(/create event/i);
       });
+    });
+  });
+
+  describe("Partial series failure", () => {
+    async function fillAndSubmitRecurring(
+      user: ReturnType<typeof userEvent.setup>,
+    ) {
+      await user.type(screen.getByLabelText(/title/i), "Recurring Event");
+      await user.click(screen.getByLabelText(/create recurring event/i));
+      await user.type(screen.getByLabelText(/start date/i), "2026-01-01");
+      await user.type(screen.getByLabelText(/^time \*/i), "18:00");
+      await user.type(screen.getByLabelText(/^location \*/i), "Test Location");
+      await user.click(
+        screen.getByRole("button", { name: /create 4 events/i }),
+      );
+    }
+
+    function failOnThirdCreate() {
+      let n = 0;
+      mockCreate.mockImplementation((data) => {
+        n++;
+        if (n === 3) return Promise.reject(new Error("Server exploded"));
+        return Promise.resolve({ id: `evt_${n}`, ...data });
+      });
+    }
+
+    it("deletes the already-created occurrences and shows the error", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      failOnThirdCreate();
+
+      render(<EventForm onSuccess={onSuccess} />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/server exploded/i)).toBeInTheDocument();
+      });
+
+      expect(mockCreate).toHaveBeenCalledTimes(3);
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(mockDelete).toHaveBeenCalledWith("evt_1");
+      expect(mockDelete).toHaveBeenCalledWith("evt_2");
+      expect(
+        screen.getByText(/failed to create event 3 of 4/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/nothing was saved/i)).toBeInTheDocument();
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: /create 4 events/i }),
+      ).not.toBeDisabled();
+    });
+
+    it("tells the user which records remain when a cleanup delete fails", async () => {
+      const user = userEvent.setup();
+      failOnThirdCreate();
+      mockDelete.mockImplementation((id: string) =>
+        id === "evt_1"
+          ? Promise.reject(new Error("delete failed"))
+          : Promise.resolve(true),
+      );
+
+      render(<EventForm />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/cleanup failed/i)).toBeInTheDocument();
+      });
+
+      // Every record is attempted even though the first delete failed
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      const message = screen.getByText(/cleanup failed/i).textContent ?? "";
+      expect(message).toContain("2026-01-01 (id evt_1)");
+      expect(message).not.toContain("evt_2");
+    });
+
+    it("deletes nothing when the first occurrence fails", async () => {
+      const user = userEvent.setup();
+      mockCreate.mockRejectedValue(new Error("Server exploded"));
+
+      render(<EventForm />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/server exploded/i)).toBeInTheDocument();
+      });
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(screen.getByText(/no events were created/i)).toBeInTheDocument();
     });
   });
 
