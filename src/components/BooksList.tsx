@@ -121,6 +121,8 @@ export default function BooksList() {
     setPendingIds((ids) => new Set(ids).add(book.id));
     try {
       await pb.collection<BookRecord>("books").delete(book.id);
+      // Drop it at once, so a stale reload can't leave a deleted book to click.
+      setBooks((current) => current?.filter((b) => b.id !== book.id) ?? null);
       await loadBooks();
     } catch (err) {
       console.error("Error deleting book:", err);

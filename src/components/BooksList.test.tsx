@@ -451,6 +451,67 @@ describe("BooksList", () => {
       expect(screen.getByText("Book C")).toBeInTheDocument();
     });
 
+    it("ignores a slow earlier reload that fails after a newer one applied", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const a = createMockBook({ title: "Book A" });
+      const b = createMockBook({ title: "Book B" });
+      const c = createMockBook({ title: "Book C" });
+      let rejectA: (err: Error) => void = () => {};
+      mockGetFullList
+        .mockResolvedValueOnce([a, b, c])
+        // Reload after deleting A: held, then it fails.
+        .mockReturnValueOnce(
+          new Promise<BookRecord[]>((_, reject) => {
+            rejectA = reject;
+          }),
+        )
+        // Reload after deleting B: arrives first.
+        .mockResolvedValueOnce([c]);
+
+      render(<BooksList />);
+      await screen.findByText("Book A");
+
+      await user.click(
+        within(cardFor("Book A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      await user.click(
+        within(cardFor("Book B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(3));
+
+      await act(async () => {
+        rejectA(new Error("stale boom"));
+      });
+
+      expect(screen.queryByText("Error loading books")).toBeNull();
+      expect(screen.queryByText("stale boom")).toBeNull();
+      expect(screen.getByText("Book C")).toBeInTheDocument();
+    });
+
+    it("removes a deleted book before its reload resolves", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const keep = createMockBook({ title: "Keep" });
+      const remove = createMockBook({ title: "Remove" });
+      mockGetFullList.mockResolvedValueOnce([keep, remove]).mockReturnValueOnce(
+        // The reload never resolves in this test.
+        new Promise(() => {}),
+      );
+
+      render(<BooksList />);
+      await screen.findByText("Remove");
+
+      await user.click(
+        within(cardFor("Remove")).getByRole("button", { name: /^Delete:/ }),
+      );
+
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText("Remove")).toBeNull();
+      expect(screen.getByText("Keep")).toBeInTheDocument();
+    });
+
     it("does not delete when the confirmation is declined", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: moderator });

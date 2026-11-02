@@ -57,8 +57,9 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 
 ### Error Handling & Async
 
-- try/catch with `err instanceof Error ? err.message : "fallback"` pattern
+- try/catch with `err instanceof Error ? err.message : "fallback"` pattern. List pages use `errorMessage()` from `src/components/ListStates.tsx` for it.
 - Loading state with disabled submit buttons during async operations
+- List pages share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty and error states, `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
 
 ## Architecture
 
@@ -68,7 +69,7 @@ src/
     catalyst/         # UI kit — wrap by default, edit only with a stated reason
   content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
-  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts)
+  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts); shared hooks (useLatestRequest.ts)
   pages/              # File-based routing
     app/              # Authenticated pages (dashboard, events, books)
   stores/             # React state (authStore.ts → useAuth() hook)
@@ -98,8 +99,6 @@ Located in `src/components/catalyst/`. Use these for UI consistency:
 - `Heading`, `Subheading`, `Text` — Typography
 - `Badge`, `BadgeButton` — Status labels and small inline actions (Edit, Delete, RSVP)
 - `Dialog`, `Alert` — Modals
-
-List pages share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty and error states, `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Call the hook's `begin()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one.
 
 Wrap Catalyst components in `src/components/` by default. Edit a file in `src/components/catalyst/` directly only when a wrapper cannot express the change, and state the reason in the PR or commit message. A hook soft-asks before editing catalyst/ files.
 

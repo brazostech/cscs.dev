@@ -176,6 +176,8 @@ export default function EventsList() {
       const loaded = await pb
         .collection<EventRecord>("events")
         .getFullList({ sort: "date" });
+      // A superseded load skips the RSVP fetches.
+      if (!isLatest()) return;
 
       let counts: Record<string, number> = {};
       let rsvps: Record<string, RsvpRecord> = {};
@@ -253,6 +255,8 @@ export default function EventsList() {
     setPendingIds((ids) => new Set(ids).add(event.id));
     try {
       await pb.collection<EventRecord>("events").delete(event.id);
+      // Drop it at once, so a stale reload can't leave a deleted event to click.
+      setEvents((current) => current?.filter((e) => e.id !== event.id) ?? null);
       await loadEvents();
     } catch (err) {
       console.error("Error deleting event:", err);
