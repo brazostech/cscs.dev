@@ -251,7 +251,7 @@ Migrations are baked into the image and apply automatically on startup ([MIGRATI
 
 **Not yet rehearsed.** This procedure is written from reading the Quadlet configuration and Podman's pull behaviour. Run it once on a quiet day and update this section with what actually happened.
 
-Re-tagging an old image as the local `:latest` does not work. The Quadlet `.kube` unit runs `podman kube play` on every start, and Podman gives an image tagged `latest` the `newer` pull policy when the YAML sets no `imagePullPolicy`. On restart it compares the local `:latest` with the registry's, finds the registry's newer, and pulls the bad image again. Pin the old image by digest instead, since a digest reference is not subject to that policy.
+Re-tagging an old image as the local `:latest` does not work. The Quadlet `.kube` unit runs `podman kube play` on every start, and Podman gives an image tagged `latest` the `newer` pull policy when the YAML sets no `imagePullPolicy`. On restart it compares the local `:latest` with the registry's, finds the registry's newer, and pulls the bad image again. Pin the old image by digest instead. Podman still checks the registry for a digest reference, but the registry can't hold a newer image under the same digest, so the pinned image stays.
 
 Open a shell on the VM:
 
@@ -285,11 +285,11 @@ sudo systemctl restart pocketbase.service
 Check that the running image is the one you intended:
 
 ```bash
-sudo podman ps --format '{{.Image}} {{.ImageID}}'
+sudo podman ps --no-trunc --format '{{.Image}} {{.ImageID}}'
 sudo podman image inspect --format '{{.ID}} {{.Digest}}' us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST}
 ```
 
-The image ID in the `ps` output must equal the ID from `inspect`, and the image name must be the digest form, not `:latest`. Then run the verify checks from [Deploy an image](#deploy-an-image).
+The full image ID in the `ps` output must equal the ID from `inspect`, and the image name must be the digest form, not `:latest`. Then run the verify checks from [Deploy an image](#deploy-an-image).
 
 Three limits:
 
@@ -323,11 +323,11 @@ gcloud compute instances add-metadata "$VM" --zone="$ZONE" --project="$PROJECT" 
 
   ```bash
   gcloud compute instances describe "$VM" --zone="$ZONE" --project="$PROJECT" \
-    --format=json | jq -r '.metadata.items[] | select(.key == "startup-script") | .value' \
+    --format=json | jq -j '.metadata.items[] | select(.key == "startup-script") | .value' \
     | diff - backend/startup.sh && echo "metadata matches backend/startup.sh"
   ```
 
-  As of 2026-11-02 this reports differences: the live metadata is the old script, without the journald cap, snap cache purge, `apt-get clean` or `ip_forward` sysctl added in #78.
+  As of 2026-11-02 this reports differences: the live metadata is the old script, without the journald cap, snap cache purge and `apt-get clean` added in #78, or the `ip_forward` sysctl added in commit `78cd05f`.
 
 ## Backups
 
