@@ -85,8 +85,14 @@ function EventRow({
   onDelete,
 }: EventRowProps) {
   return (
-    <tr className="grid grid-cols-2 gap-y-3 rounded-lg border border-zinc-200 bg-white p-4 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 dark:border-zinc-800 dark:bg-zinc-900 dark:lg:bg-transparent">
-      <td className="col-span-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap">
+    <tr
+      role="row"
+      className="grid grid-cols-2 gap-y-3 rounded-lg border border-zinc-200 bg-white p-4 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 dark:border-zinc-800 dark:bg-zinc-900 dark:lg:bg-transparent"
+    >
+      <td
+        role="cell"
+        className="col-span-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap"
+      >
         <div className="text-sm font-medium text-zinc-900 dark:text-white">
           {event.title}
         </div>
@@ -94,7 +100,10 @@ function EventRow({
           {event.type}
         </div>
       </td>
-      <td className="col-span-2 flex items-start gap-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap">
+      <td
+        role="cell"
+        className="col-span-2 flex items-start gap-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap"
+      >
         <CalendarIcon
           aria-hidden="true"
           className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400 lg:hidden"
@@ -108,7 +117,10 @@ function EventRow({
           </div>
         </div>
       </td>
-      <td className="col-span-2 flex items-start gap-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap">
+      <td
+        role="cell"
+        className="col-span-2 flex items-start gap-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap"
+      >
         <MapPinIcon
           aria-hidden="true"
           className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400 lg:hidden"
@@ -124,11 +136,17 @@ function EventRow({
           )}
         </div>
       </td>
-      <td className="flex items-center gap-1 border-t border-zinc-100 pt-3 text-xs text-zinc-500 lg:table-cell lg:border-0 lg:px-6 lg:py-4 lg:text-center lg:text-sm dark:border-zinc-800 dark:text-zinc-400">
+      <td
+        role="cell"
+        className="flex items-center gap-1 border-t border-zinc-100 pt-3 text-xs text-zinc-500 lg:table-cell lg:border-0 lg:px-6 lg:py-4 lg:text-center lg:text-sm dark:border-zinc-800 dark:text-zinc-400"
+      >
         <UsersIcon aria-hidden="true" className="h-4 w-4 lg:hidden" />
         <span>{count} attending</span>
       </td>
-      <td className="flex items-center justify-end gap-2 border-t border-zinc-100 pt-3 lg:table-cell lg:border-0 lg:px-6 lg:py-4 lg:text-right dark:border-zinc-800">
+      <td
+        role="cell"
+        className="flex items-center justify-end gap-2 border-t border-zinc-100 pt-3 lg:table-cell lg:border-0 lg:px-6 lg:py-4 lg:text-right dark:border-zinc-800"
+      >
         <div className="flex items-center justify-end gap-2">
           <Button
             color={isAttending ? "emerald" : "indigo"}
@@ -145,7 +163,11 @@ function EventRow({
               >
                 Edit
               </Button>
-              <Button color="red" onClick={() => onDelete(event)}>
+              <Button
+                color="red"
+                disabled={isPending}
+                onClick={() => onDelete(event)}
+              >
                 Delete
               </Button>
             </>
@@ -254,12 +276,19 @@ export default function EventsList() {
       return;
     }
 
+    setPendingIds((ids) => new Set(ids).add(event.id));
     try {
       await pb.collection<EventRecord>("events").delete(event.id);
       await loadEvents();
     } catch (err) {
       console.error("Error deleting event:", err);
       alert("Failed to delete event: " + errorMessage(err, "Unknown error"));
+    } finally {
+      setPendingIds((ids) => {
+        const next = new Set(ids);
+        next.delete(event.id);
+        return next;
+      });
     }
   }
 
@@ -295,39 +324,56 @@ export default function EventsList() {
   } else {
     content = (
       <div className="lg:overflow-x-auto lg:rounded-lg lg:border lg:border-zinc-200 dark:lg:border-zinc-800">
-        <table className="block min-w-full lg:table lg:divide-y lg:divide-zinc-200 dark:lg:divide-zinc-800">
-          <thead className="max-lg:sr-only lg:table-header-group lg:bg-zinc-50 dark:lg:bg-zinc-900">
-            <tr>
+        <table
+          role="table"
+          className="block min-w-full lg:table lg:divide-y lg:divide-zinc-200 dark:lg:divide-zinc-800"
+        >
+          <thead
+            role="rowgroup"
+            className="max-lg:sr-only lg:table-header-group lg:bg-zinc-50 dark:lg:bg-zinc-900"
+          >
+            <tr role="row">
               <th
+                role="columnheader"
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Event
               </th>
               <th
+                role="columnheader"
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Date &amp; Time
               </th>
               <th
+                role="columnheader"
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Location
               </th>
               <th
+                role="columnheader"
                 scope="col"
                 className="px-6 py-3 text-center text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Attending
               </th>
-              <th scope="col" className="relative px-6 py-3">
+              <th
+                role="columnheader"
+                scope="col"
+                className="relative px-6 py-3"
+              >
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
-          <tbody className="block space-y-4 lg:table-row-group lg:space-y-0 lg:divide-y lg:divide-zinc-200 lg:bg-white dark:lg:divide-zinc-800 dark:lg:bg-zinc-900">
+          <tbody
+            role="rowgroup"
+            className="block space-y-4 lg:table-row-group lg:space-y-0 lg:divide-y lg:divide-zinc-200 lg:bg-white dark:lg:divide-zinc-800 dark:lg:bg-zinc-900"
+          >
             {events.map((event) => (
               <EventRow
                 key={event.id}

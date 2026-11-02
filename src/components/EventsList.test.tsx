@@ -449,6 +449,30 @@ describe("EventsList", () => {
       expect(screen.getByText("Safe")).toBeInTheDocument();
     });
 
+    it("disables Delete while the request is in flight", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      let resolve: (value: unknown) => void = () => {};
+      mockGetFullList.mockResolvedValue([createMockEvent({ title: "Once" })]);
+      mockDelete.mockReturnValue(
+        new Promise((r) => {
+          resolve = r;
+        }),
+      );
+
+      render(<EventsList />);
+      await screen.findByText("Once");
+      const row = within(rowFor("Once"));
+
+      await user.click(row.getByRole("button", { name: "Delete" }));
+      expect(row.getByRole("button", { name: "Delete" })).toBeDisabled();
+
+      resolve(true);
+      await waitFor(() =>
+        expect(row.getByRole("button", { name: "Delete" })).toBeEnabled(),
+      );
+    });
+
     it("alerts and keeps the event when the delete fails", async () => {
       const user = userEvent.setup();
       mockUseAuth.mockReturnValue({ user: moderator });
