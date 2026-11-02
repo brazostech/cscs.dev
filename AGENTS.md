@@ -145,6 +145,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 - **Architecture decisions**: `doc/adr/` (12 ADRs covering hosting, runtime, CI/CD, etc.)
 - **Backend setup & deployment**: `backend/README.md`
+- **Backend operations runbook**: `backend/RUNBOOK.md`
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
 - **Feature roadmap**: `doc/improvements.md`

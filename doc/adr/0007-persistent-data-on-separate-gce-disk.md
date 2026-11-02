@@ -27,3 +27,10 @@ A daily snapshot policy (`pod-data-daily-backup`) runs at 03:00 UTC with 7-day r
 - Snapshot retention at 7 days means incidents older than a week cannot be recovered from snapshots alone.
 - The 10GB disk size is generous for a community site using SQLite. PocketBase is unlikely to approach this limit in the near term.
 - The disk must be in the same zone (`us-central1-a`) as the VM, which limits geographic flexibility.
+
+## Amendment (2026-11-02, #83)
+
+- The daily snapshot policy described above was not attached to `pod-data` for most of this decision's life. `pod-data-daily-backup` existed with the stated schedule and retention, but `deploy.sh` only applied it when it created a new disk, so the existing `pod-data` disk ran without snapshots. The gap went unnoticed until the boot-disk incident that [#78](https://github.com/brazostech/cscs.dev/pull/78) fixed.
+- #78 made `deploy.sh` attach the policy to an existing disk too, for future runs of `deploy.sh up`. The policy was attached to `pod-data` by hand on 2026-11-02 with `gcloud compute disks add-resource-policies pod-data --resource-policies=pod-data-daily-backup --zone=us-central1-a --project=cscsdotdev`.
+- The first scheduled snapshot, `pod-data-us-central1-a-20261102033821-bfcizm3p`, was taken at 2026-11-02 03:38 UTC, and the disk's `resourcePolicies` field now lists the policy. Nothing else in this decision changes; the status stays Accepted.
+- Verification, restore and monitoring procedures are in [`backend/RUNBOOK.md`](../../backend/RUNBOOK.md).

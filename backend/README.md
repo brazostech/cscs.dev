@@ -49,7 +49,7 @@ Each migration has an up function and a down function for reversibility.
 
 ### Infrastructure
 
-Hosted on a GCE e2-micro instance (~$8/month) running Podman via Quadlet. Application data persists on a separate block device with scheduled backups.
+Hosted on a GCE e2-micro instance (~$8/month) running Podman via Quadlet. Application data persists on a separate 10 GB `pod-data` disk, backed up by daily snapshots at 03:00 UTC with 7-day retention. For backup status, restores, incident triage and monitoring, see [RUNBOOK.md](RUNBOOK.md).
 
 ### Deploy Steps
 
@@ -63,13 +63,15 @@ Hosted on a GCE e2-micro instance (~$8/month) running Podman via Quadlet. Applic
 2. **SSH into the VM** and restart:
 
    ```bash
-   ssh jackvincenthall@34.67.31.86
+   gcloud compute ssh cscs-dev-backend --zone=us-central1-a --project=cscsdotdev
    gcloud auth print-access-token | sudo podman login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
    sudo podman pull us-central1-docker.pkg.dev/cscsdotdev/website/backend:latest
    sudo systemctl restart pocketbase.service
    ```
 
 3. **Verify**: `sudo systemctl status pocketbase.service` should show `active (running)`.
+
+Migrations apply when the container starts. For the digest-based rollback, restores and incident triage, see [RUNBOOK.md](RUNBOOK.md).
 
 ### VM Management
 
@@ -78,6 +80,8 @@ cd backend
 ./deploy.sh up    # Provision VM (idempotent)
 ./deploy.sh down  # Tear down VM (preserves disk and IP)
 ```
+
+Provisioning uses your SSH identity: `CSCS_SSH_USER` (default `whoami`) and `CSCS_SSH_PUBLIC_KEY` (default `~/.ssh/id_rsa.pub`). Set both when they differ from those defaults.
 
 ## Architecture
 
