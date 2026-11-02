@@ -4,14 +4,16 @@
  * Tests cover:
  * - A missing or empty token: the invalid-link state, and nothing requested
  * - A valid token: the loading state, then the verified state and its links
- * - A failing token: the failed state with the server message and its links
- * - Token and server text are rendered as text, never as markup, and the
- *   token is sent exactly as the URL decodes it
+ * - A failing token: the failed state with fixed, status-based text (never the
+ *   server's message) and its links
+ * - A token is sent exactly as the URL decodes it, and never rendered
+ * - Each state's title is the page's h1
  * - One confirm call per mount, including under StrictMode
  * - The auth store is left alone, and nothing is logged with console.log
  */
 
 import { StrictMode } from "react";
+import { ClientResponseError } from "pocketbase";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import VerifyEmail from "./VerifyEmail";
@@ -45,6 +47,16 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+/** A failure as the PocketBase SDK throws it, with the server's own message. */
+function serverError(status: number, message = "Server message.") {
+  return new ClientResponseError({ status, response: { message } });
+}
+
+const LINK_INVALID_TEXT =
+  "This verification link has expired or is invalid. Sign in to request a new verification email.";
+const TRY_AGAIN_TEXT =
+  "We couldn't verify your email right now. Please try again in a moment.";
+
 function linkTargets(): Record<string, string | null> {
   return Object.fromEntries(
     screen
@@ -55,7 +67,12 @@ function linkTargets(): Record<string, string | null> {
 
 describe("VerifyEmail", () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    // Only the local mocks: resetAllMocks would also wipe the global ones
+    // (matchMedia, confirm, alert) that src/test/setup.ts installs.
+    mockCollection.mockReset();
+    mockConfirmVerification.mockReset();
+    mockAuthStore.save.mockReset();
+    mockAuthStore.clear.mockReset();
     setSearch("");
     mockCollection.mockReturnValue({
       confirmVerification: (...args: unknown[]) =>
@@ -139,6 +156,43 @@ describe("VerifyEmail", () => {
       expect(mockConfirmVerification).toHaveBeenCalledWith("abc.def-123_xyz");
     });
 
+    it("uses the first token when the parameter is repeated", async () => {
+      setSearch("?token=a&token=b");
+
+      render(<VerifyEmail />);
+      await screen.findByText("Email Verified!");
+
+      expect(mockConfirmVerification).toHaveBeenCalledTimes(1);
+      expect(mockConfirmVerification).toHaveBeenCalledWith("a");
+    });
+
+    it("survives unmounting while the confirm call is pending", async () => {
+      setSearch("?token=abc");
+      const pending = deferred<boolean>();
+      mockConfirmVerification.mockReturnValue(pending.promise);
+
+      const { unmount } = render(<VerifyEmail />);
+      unmount();
+      pending.resolve(true);
+      await pending.promise;
+
+      expect(mockConfirmVerification).toHaveBeenCalledTimes(1);
+      expect(console.error).not.toHaveBeenCalled();
+    });
+
+    it("survives unmounting while a failing confirm call is pending", async () => {
+      setSearch("?token=abc");
+      const pending = deferred<boolean>();
+      mockConfirmVerification.mockReturnValue(pending.promise);
+
+      const { unmount } = render(<VerifyEmail />);
+      unmount();
+      pending.reject(serverError(400));
+      await pending.promise.catch(() => {});
+
+      expect(screen.queryByText("Verification Failed")).toBeNull();
+    });
+
     it("shows the verified state with links to sign in and go home", async () => {
       setSearch("?token=abc");
 
@@ -167,10 +221,13 @@ describe("VerifyEmail", () => {
   });
 
   describe("with a failing token", () => {
-    it("shows the failed state with the server message and its links", async () => {
+    it("shows the expired or invalid text for a 400, with links to sign in and go home", async () => {
       setSearch("?token=expired");
       mockConfirmVerification.mockRejectedValue(
-        new Error("Failed to authenticate."),
+        serverError(
+          400,
+          "An error occurred while validating the submitted data.",
+        ),
       );
 
       render(<VerifyEmail />);
@@ -178,40 +235,71 @@ describe("VerifyEmail", () => {
       expect(
         await screen.findByText("Verification Failed"),
       ).toBeInTheDocument();
-      expect(screen.getByText("Failed to authenticate.")).toBeInTheDocument();
-      expect(linkTargets()).toEqual({
-        "Sign In": "/login",
-        "Register Again": "/register",
-      });
+      expect(screen.getByText(LINK_INVALID_TEXT)).toBeInTheDocument();
+      expect(linkTargets()).toEqual({ "Sign In": "/login", "Go to Home": "/" });
       expect(screen.queryByText("Email Verified!")).toBeNull();
       expect(screen.queryByRole("status")).toBeNull();
     });
 
-    it("shows the fallback text when the failure is not an Error", async () => {
-      setSearch("?token=expired");
-      mockConfirmVerification.mockRejectedValue("boom");
+    it.each([
+      ["a network failure (status 0)", () => serverError(0)],
+      ["a rate limit (429)", () => serverError(429)],
+      ["a server error (500)", () => serverError(500)],
+      ["a plain Error", () => new Error("Server message.")],
+      ["something that is not an Error", () => "Server message."],
+    ])("shows the try-again text for %s", async (_name, makeFailure) => {
+      setSearch("?token=abc");
+      mockConfirmVerification.mockRejectedValue(makeFailure());
 
       render(<VerifyEmail />);
 
       expect(
         await screen.findByText("Verification Failed"),
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          "The verification link may have expired or is invalid. Please try requesting a new verification email.",
-        ),
-      ).toBeInTheDocument();
-      expect(screen.queryByText("boom")).toBeNull();
+      expect(screen.getByText(TRY_AGAIN_TEXT)).toBeInTheDocument();
+      expect(screen.queryByText(LINK_INVALID_TEXT)).toBeNull();
+      expect(linkTargets()).toEqual({ "Sign In": "/login", "Go to Home": "/" });
     });
 
-    it("logs the failure with console.error, and leaves the auth store alone", async () => {
+    it.each([400, 0, 429, 500])(
+      "never shows the server's message, for a %i",
+      async (status) => {
+        setSearch("?token=abc");
+        mockConfirmVerification.mockRejectedValue(
+          serverError(status, "Internal: users_tokenKey unique constraint"),
+        );
+
+        const { container } = render(<VerifyEmail />);
+        await screen.findByText("Verification Failed");
+
+        expect(container.textContent).not.toContain("Internal");
+        expect(container.textContent).not.toContain("tokenKey");
+      },
+    );
+
+    it("renders no markup from a server message", async () => {
+      setSearch("?token=abc");
+      mockConfirmVerification.mockRejectedValue(
+        serverError(400, '<img src=x onerror="window.pwned=1"> & <b>bold</b>'),
+      );
+
+      const { container } = render(<VerifyEmail />);
+      await screen.findByText("Verification Failed");
+
+      expect(container.querySelector("img")).toBeNull();
+      expect(container.querySelector("b")).toBeNull();
+      expect(container.textContent).not.toContain("onerror");
+    });
+
+    it("logs the real error once with console.error, and leaves the auth store alone", async () => {
       setSearch("?token=expired");
-      const failure = new Error("nope");
+      const failure = serverError(400);
       mockConfirmVerification.mockRejectedValue(failure);
 
       render(<VerifyEmail />);
       await screen.findByText("Verification Failed");
 
+      expect(console.error).toHaveBeenCalledTimes(1);
       expect(console.error).toHaveBeenCalledWith(
         "Error verifying email:",
         failure,
@@ -219,21 +307,48 @@ describe("VerifyEmail", () => {
       expect(mockAuthStore.save).not.toHaveBeenCalled();
       expect(mockAuthStore.clear).not.toHaveBeenCalled();
     });
+  });
 
-    it("renders a server message as text, never as markup", async () => {
-      setSearch("?token=expired");
-      mockConfirmVerification.mockRejectedValue(
-        new Error('<img src=x onerror="window.pwned=1"> & <b>bold</b>'),
-      );
-
-      const { container } = render(<VerifyEmail />);
-      await screen.findByText("Verification Failed");
+  describe("the page heading", () => {
+    it("is the one h1 in the missing-token state", () => {
+      render(<VerifyEmail />);
 
       expect(
-        screen.getByText('<img src=x onerror="window.pwned=1"> & <b>bold</b>'),
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Invalid Verification Link",
+        }),
       ).toBeInTheDocument();
-      expect(container.querySelector("img")).toBeNull();
-      expect(container.querySelector("b")).toBeNull();
+      expect(screen.getAllByRole("heading")).toHaveLength(1);
+    });
+
+    it("is the one h1 in the verified state", async () => {
+      setSearch("?token=abc");
+
+      render(<VerifyEmail />);
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Email Verified!",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("heading")).toHaveLength(1);
+    });
+
+    it("is the one h1 in the failed state", async () => {
+      setSearch("?token=abc");
+      mockConfirmVerification.mockRejectedValue(serverError(400));
+
+      render(<VerifyEmail />);
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Verification Failed",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByRole("heading")).toHaveLength(1);
     });
   });
 
@@ -265,7 +380,7 @@ describe("VerifyEmail", () => {
     });
   });
 
-  describe("single-use token", () => {
+  describe("one confirm request", () => {
     it("confirms once when effects run twice, as under StrictMode", async () => {
       setSearch("?token=abc");
 

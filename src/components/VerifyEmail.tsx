@@ -4,13 +4,24 @@ import {
   ExclamationTriangleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { ClientResponseError } from "pocketbase";
 import { pb } from "../lib/pocketbase";
 import { Button } from "./catalyst/button";
-import { Notice, Spinner, errorMessage } from "./ListStates";
+import { Notice, Spinner } from "./ListStates";
 
-/** Shown when the request fails with something that is not an `Error`. */
-const FAILED_FALLBACK =
-  "The verification link may have expired or is invalid. Please try requesting a new verification email.";
+/** PocketBase answers 400 for a token that is expired, tampered with or invalid. */
+const LINK_INVALID_TEXT =
+  "This verification link has expired or is invalid. Sign in to request a new verification email.";
+/** Any other failure: the network, a rate limit, a server error. */
+const TRY_AGAIN_TEXT =
+  "We couldn't verify your email right now. Please try again in a moment.";
+
+/** The text for a failed confirm call. The server's own message is never shown. */
+function failureText(err: unknown): string {
+  return err instanceof ClientResponseError && err.status === 400
+    ? LINK_INVALID_TEXT
+    : TRY_AGAIN_TEXT;
+}
 
 type Outcome = { status: "verified" } | { status: "failed"; message: string };
 
@@ -53,13 +64,12 @@ function Actions({ children }: { children: React.ReactNode }) {
  * `window.location` while rendering, so render it with `client:only="react"`.
  */
 export default function VerifyEmail() {
-  // Read once: the page never navigates, and the token is single-use.
+  // Read once: the page never navigates.
   const [token] = useState(readToken);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
-  // Confirming consumes the token, so a second call would fail a link that
-  // worked. Astro does not wrap islands in StrictMode, but anything that
-  // double-runs effects (StrictMode in a wrapper, Storybook) must not resend.
-  // Refs survive StrictMode's simulated remount; do not cancel on cleanup, or
+  // Send the confirm request once. Astro does not wrap islands in StrictMode,
+  // but anything that double-runs effects (StrictMode in a wrapper,
+  // Storybook) must not send the same request twice. Refs survive StrictMode's simulated remount; do not cancel on cleanup, or
   // the first call's result would be dropped and the second never made.
   const hasConfirmed = useRef(false);
 
@@ -73,7 +83,7 @@ export default function VerifyEmail() {
         console.error("Error verifying email:", err);
         setOutcome({
           status: "failed",
-          message: errorMessage(err, FAILED_FALLBACK),
+          message: failureText(err),
         });
       });
   }, [token]);
@@ -87,6 +97,7 @@ export default function VerifyEmail() {
           </StatusIcon>
         }
         title="Invalid Verification Link"
+        level={1}
         message="The verification link is missing or invalid."
       >
         <div className="mt-8">
@@ -111,6 +122,7 @@ export default function VerifyEmail() {
           </StatusIcon>
         }
         title="Email Verified!"
+        level={1}
         message="Your email address has been successfully verified. You can now sign in to access all features."
       >
         <Actions>
@@ -133,14 +145,15 @@ export default function VerifyEmail() {
         </StatusIcon>
       }
       title="Verification Failed"
+      level={1}
       message={outcome.message}
     >
       <Actions>
         <Button href="/login" color="indigo">
           Sign In
         </Button>
-        <Button href="/register" outline>
-          Register Again
+        <Button href="/" outline>
+          Go to Home
         </Button>
       </Actions>
     </Notice>

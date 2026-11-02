@@ -42,6 +42,26 @@ describe("Notice", () => {
     );
   });
 
+  it("renders the title as a level 3 heading unless told otherwise", () => {
+    render(<Notice icon={<svg />} title="Nothing here" message="Message." />);
+
+    expect(screen.getByRole("heading", { name: "Nothing here" }).tagName).toBe(
+      "H3",
+    );
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  });
+
+  it("renders the title as a level 1 heading when level is 1", () => {
+    render(
+      <Notice icon={<svg />} title="Whole page" message="Message." level={1} />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Whole page" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
+  });
+
   it("renders children after the message", () => {
     render(
       <Notice icon={<svg />} title="Nothing here" message="Come back later.">
