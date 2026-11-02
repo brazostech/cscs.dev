@@ -19,14 +19,15 @@ Every command below assumes an authenticated `gcloud` against `$PROJECT`. The st
 
 As of 2026-11-02:
 
-| Area                     | Status            | Detail                                                                          |
-| ------------------------ | ----------------- | ------------------------------------------------------------------------------- |
-| Backup policy            | ✅ Attached       | `pod-data-daily-backup` on `pod-data`, daily 03:00 UTC, 7-day retention         |
-| First scheduled snapshot | ✅ Verified       | `pod-data-us-central1-a-20261102033821-bfcizm3p` at 2026-11-02 03:38 UTC        |
-| Uptime check             | ❌ Not configured | No Cloud Monitoring uptime check on `/api/health` yet                           |
-| Email alert              | ❌ Not configured | No notification channel or alert policy yet                                     |
-| Boot-disk 80% alert      | ❌ Not configured | Needs the Ops Agent on the VM (GCE metrics do not report filesystem usage)      |
-| Restore rehearsal        | ❌ Not rehearsed  | The restore procedure is written from the configuration, not yet run end to end |
+| Area                     | Status            | Detail                                                                                                                                       |
+| ------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backup policy            | ✅ Attached       | `pod-data-daily-backup` on `pod-data`, daily 03:00 UTC, 7-day retention                                                                      |
+| First scheduled snapshot | ✅ Verified       | `pod-data-us-central1-a-20261102033821-bfcizm3p` at 2026-11-02 03:38 UTC                                                                     |
+| Uptime check             | ❌ Not configured | No Cloud Monitoring uptime check on `/api/health` yet                                                                                        |
+| Email alert              | ❌ Not configured | No notification channel or alert policy yet                                                                                                  |
+| Boot-disk 80% alert      | ❌ Not configured | Needs the Ops Agent on the VM (GCE metrics do not report filesystem usage)                                                                   |
+| Live `startup-script`    | ⚠️ Stale          | Instance metadata still holds the old script, without the #78 disk-space fixes. Update pending, see [Update `startup.sh`](#update-startupsh) |
+| Restore rehearsal        | ❌ Not rehearsed  | The restore procedure is written from the configuration, not yet run end to end                                                              |
 
 The live items above stay parked with the maintainer until #83's acceptance checks pass.
 
@@ -119,15 +120,28 @@ SSH login is not just authentication: the guest agent has to write your public k
 
 Recovery order:
 
-1. Reboot. The startup script runs on every boot and carries the disk-space mitigations from PR #78 (journal cap, snap cache), so a reset is the cheapest first attempt:
+1. Reboot with a clean stop and start, which gives PocketBase an ACPI shutdown before the power goes:
 
    ```bash
-   gcloud compute instances reset "$VM" --zone="$ZONE" --project="$PROJECT"
+   gcloud compute instances stop "$VM" --zone="$ZONE" --project="$PROJECT"
+   gcloud compute instances start "$VM" --zone="$ZONE" --project="$PROJECT"
    ```
 
-   Wait about two minutes, then retry SSH.
+   Wait about two minutes, then retry SSH. If the VM hangs and will not stop, `gcloud compute instances reset "$VM" --zone="$ZONE" --project="$PROJECT"` is a hard power-cycle: faster, but with no clean shutdown, so use it only as a last resort on a data host.
 
-2. If SSH still fails, read the serial output. It is read-only and always available, and usually names the cause directly:
+   The startup script runs on every boot. Its disk-space mitigations from PR #78 (journal cap, snap cache, `apt-get clean`) only take effect after the instance's `startup-script` metadata is updated; as of 2026-11-02 the live metadata is still the old script, so a reboot does not apply them yet. See [Update `startup.sh`](#update-startupsh).
+
+2. Grow the boot disk. This is the cheapest fix for a full disk, needs no SSH, and works even when login is impossible. Resize the disk, then stop and start the VM so the guest grows the filesystem on boot:
+
+   ```bash
+   gcloud compute disks resize "$VM" --size=30GB --zone="$ZONE" --project="$PROJECT"
+   gcloud compute instances stop "$VM" --zone="$ZONE" --project="$PROJECT"
+   gcloud compute instances start "$VM" --zone="$ZONE" --project="$PROJECT"
+   ```
+
+   The boot disk has the same name as the VM and is 20 GB today. A disk can only grow, never shrink, and a bigger disk costs more every month, so this buys time rather than fixing the cause: free space as in [Free space safely](#free-space-safely) once you are in.
+
+3. If SSH still fails, read the serial output. It is read-only and always available, and usually names the cause directly:
 
    ```bash
    gcloud compute instances get-serial-port-output "$VM" \
@@ -136,7 +150,7 @@ Recovery order:
 
    Look for `No space left on device`, `Read-only file system`, `Failed to start` or an sshd error.
 
-3. The interactive serial console can get you a login prompt. It requires serial port access to be enabled once:
+4. The interactive serial console can get you a login prompt. It requires serial port access to be enabled once:
 
    ```bash
    gcloud compute instances add-metadata "$VM" --zone="$ZONE" --project="$PROJECT" \
@@ -154,13 +168,14 @@ Run these in order and re-check `df -h /` after each:
 sudo journalctl --vacuum-size=200M
 sudo find /var/lib/snapd/cache -type f -delete 2>/dev/null || true
 sudo apt-get clean
-sudo podman system prune -f
 ```
+
+Do not run `sudo podman system prune -f` here unless you accept losing the rollback image: after a deploy pull, the previous `:latest` is a dangling image, and `prune -f` deletes it. See [Roll back an image](#roll-back-an-image).
 
 - `journalctl --vacuum-size=200M` matches the cap `startup.sh` writes (`SystemMaxUse=200M`). Safe.
 - `/var/lib/snapd/cache` holds downloaded snap archives. Installed revisions are unaffected. Safe.
 - `apt-get clean` clears `/var/cache/apt/archives`. Safe. `apt-get autoremove --purge` also removes unused kernels and dependencies, so review its list before confirming.
-- `podman system prune -f` removes stopped containers, unused networks and dangling images. Adding `-a` removes images not used by a running container, which forces a re-pull on the next restart; avoid `--volumes`.
+- `podman system prune -f` removes stopped containers, unused networks and dangling images. **It deletes the previous image that a rollback needs**, so prune only after the rollback window for the latest deploy has passed, or note the digest first so you can pull it from the registry. Adding `-a` removes images not used by a running container, which forces a re-pull on the next restart; avoid `--volumes`.
 - Never delete anything under `/mnt/pod-data/pb_data`. That is the database.
 
 To find what is large:
@@ -208,10 +223,15 @@ Migrations are baked into the image and apply automatically on startup ([MIGRATI
    make build-push
    ```
 
-3. Pull and restart on the VM:
+3. Pull and restart. First open a shell on the VM:
 
    ```bash
    gcloud compute ssh "$VM" --zone="$ZONE" --project="$PROJECT"
+   ```
+
+   Then, on the VM:
+
+   ```bash
    gcloud auth print-access-token | sudo podman login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
    sudo podman pull us-central1-docker.pkg.dev/cscsdotdev/website/backend:latest
    sudo systemctl restart pocketbase.service
@@ -229,29 +249,52 @@ Migrations are baked into the image and apply automatically on startup ([MIGRATI
 
 ### Roll back an image
 
-The Quadlet unit runs `:latest`, so rolling back means re-pointing the local `:latest` tag at the previous digest and restarting. The old image is usually still on disk; the registry copy is the fallback.
+**Not yet rehearsed.** This procedure is written from reading the Quadlet configuration and Podman's pull behaviour. Run it once on a quiet day and update this section with what actually happened.
+
+Re-tagging an old image as the local `:latest` does not work. The Quadlet `.kube` unit runs `podman kube play` on every start, and Podman gives an image tagged `latest` the `newer` pull policy when the YAML sets no `imagePullPolicy`. On restart it compares the local `:latest` with the registry's, finds the registry's newer, and pulls the bad image again. Pin the old image by digest instead, since a digest reference is not subject to that policy.
+
+Open a shell on the VM:
 
 ```bash
-OLD_DIGEST=sha256:...   # recorded in step 1 above
-
 gcloud compute ssh "$VM" --zone="$ZONE" --project="$PROJECT"
+```
+
+Then, on the VM, set the digest recorded in step 1 of [Deploy an image](#deploy-an-image) and point the unit at it:
+
+```bash
+OLD_DIGEST=sha256:...   # recorded in step 1 of Deploy an image
+
 sudo podman pull us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST}
-sudo podman tag us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST} \
-  us-central1-docker.pkg.dev/cscsdotdev/website/backend:latest
+sudoedit /etc/containers/systemd/pocketbase.yaml
+```
+
+In `pocketbase.yaml`, change the container's `image:` line to the digest form:
+
+```yaml
+image: us-central1-docker.pkg.dev/cscsdotdev/website/backend@sha256:<old>
+```
+
+Then reload and restart:
+
+```bash
+sudo systemctl daemon-reload
 sudo systemctl restart pocketbase.service
 ```
 
-If `podman tag` rejects the digest reference, tag the pulled image ID instead:
+Check that the running image is the one you intended:
 
 ```bash
-sudo podman images --format '{{.ID}} {{.Repository}}:{{.Tag}}'
-sudo podman tag <image-id> us-central1-docker.pkg.dev/cscsdotdev/website/backend:latest
+sudo podman ps --format '{{.Image}} {{.ImageID}}'
+sudo podman image inspect --format '{{.Digest}}' us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST}
 ```
 
-Two limits:
+The `ps` output must show the old image, not `:latest`. Then run the verify checks from [Deploy an image](#deploy-an-image).
+
+Three limits:
 
 - **An image rollback does not roll back migrations.** PocketBase records applied migrations in the database. If the release added or changed a migration, the older image will report missing migrations and fail to start against the newer schema. In that case restore the data disk from a snapshot instead (see [Restore `pod-data` from a snapshot](#restore-pod-data-from-a-snapshot)).
-- **The rollback is local to the VM.** The registry's `:latest` still points at the bad image, so a rebuilt VM will pull it again. Push a fixed image, or roll back by digest again after the rebuild.
+- **The pin is a manual edit on the VM.** The `image:` line in `pocketbase.yaml` stays on the old digest until you change it back. When a fixed image is pushed, restore the `:latest` reference in `pocketbase.yaml` (or the next deploy will not take effect), reload, and restart. A rebuilt VM regenerates the file from `startup.sh` with `:latest`, and the registry's `:latest` still points at the bad image until you push a fix.
+- **The old image must still be available.** A plain `podman system prune -f` after the deploy deletes it locally; the `pull` above fetches it from the registry, which keeps every pushed digest.
 
 ## Update `startup.sh`
 
@@ -275,12 +318,15 @@ gcloud compute instances add-metadata "$VM" --zone="$ZONE" --project="$PROJECT" 
   ```
 
 - For the system-level parts of the script (journald cap, snap cache, swap), run the corresponding commands directly.
-- Verify the stored script:
+- Verify that the stored script matches the repository. From the repository root, no output from `diff` means they are identical:
 
   ```bash
-  gcloud compute instances describe "$VM" --zone="$ZONE" --project="$PROJECT" \
-    --format=json | jq -r '.metadata.items[] | select(.key == "startup-script") | .value' | head -5
+  diff <(gcloud compute instances describe "$VM" --zone="$ZONE" --project="$PROJECT" \
+    --format=json | jq -r '.metadata.items[] | select(.key == "startup-script") | .value') \
+    backend/startup.sh && echo "metadata matches backend/startup.sh"
   ```
+
+  As of 2026-11-02 this reports differences: the live metadata is the old script, without the journald cap, snap cache purge, `apt-get clean` or `ip_forward` sysctl added in #78.
 
 ## Backups
 
@@ -311,7 +357,15 @@ gcloud compute snapshots list --project="$PROJECT" \
   --format="table(name,creationTimestamp,diskSizeGb,status)"
 ```
 
-A snapshot dated within the last 24 hours means backups are working. Snapshots older than 7 days should disappear automatically; none from the last 24 hours means the policy was detached or the disk is gone.
+To check only the scheduled backups, filter on their naming pattern, so a manual snapshot cannot mask a broken schedule:
+
+```bash
+gcloud compute snapshots list --project="$PROJECT" \
+  --filter="name~'^pod-data-us-central1-a-'" \
+  --format="table(name,creationTimestamp,diskSizeGb,status)"
+```
+
+A scheduled snapshot dated within the last 24 hours means backups are working. Scheduled snapshots older than 7 days should disappear automatically; none from the last 24 hours means the policy was detached or the disk is gone. Manual snapshots never expire. One exists today, `pod-data-pre-fix-20261101`, taken before the #78 changes; delete it once nobody needs it.
 
 Only `pod-data` is backed up. The boot disk is disposable and is rebuilt by `startup.sh`. For a manual pre-change snapshot:
 
@@ -326,9 +380,9 @@ Manual snapshots have no expiry and cost money; delete them when the change is c
 
 **Not yet rehearsed.** This procedure is written from the current configuration. Run it once end to end on a quiet day and update this section with what actually happened.
 
-Restoring replaces the whole data disk: every write after the snapshot is lost.
+Restoring replaces the whole data disk: every write after the snapshot is lost. The procedure restores in place. The disk keeps the name `pod-data`, so `deploy.sh up` stays correct, and a manual pre-restore snapshot is the rollback.
 
-1. Choose the snapshot:
+1. Choose the snapshot. Scheduled snapshots are named `pod-data-us-central1-a-<timestamp>-<suffix>`:
 
    ```bash
    gcloud compute snapshots list --project="$PROJECT" \
@@ -336,47 +390,74 @@ Restoring replaces the whole data disk: every write after the snapshot is lost.
      --format="table(name,creationTimestamp,diskSizeGb,status)"
    ```
 
-2. Create a new disk in the same zone from it. Do not reuse the `pod-data` name yet:
-
-   ```bash
-   RESTORE_DISK="pod-data-restore-$(date -u +%Y%m%d%H%M)"
-   gcloud compute disks create "$RESTORE_DISK" \
-     --source-snapshot=<snapshot-name> \
-     --zone="$ZONE" --project="$PROJECT" --type=pd-balanced
-   ```
-
-3. Stop the VM so the filesystem is quiesced:
+2. Stop the VM so the filesystem is quiesced:
 
    ```bash
    gcloud compute instances stop "$VM" --zone="$ZONE" --project="$PROJECT"
    ```
 
-4. Detach the old disk. Keep it: it is the rollback.
+3. Take a manual snapshot of the current disk. This is the rollback; do not skip it, because step 5 deletes the disk:
+
+   ```bash
+   PRE_RESTORE="${DISK}-pre-restore-$(date -u +%Y%m%d%H%M)"
+   gcloud compute snapshots create "$PRE_RESTORE" \
+     --source-disk="$DISK" --source-disk-zone="$ZONE" --project="$PROJECT"
+   ```
+
+   Wait until the snapshot is `READY` before going on:
+
+   ```bash
+   gcloud compute snapshots describe "$PRE_RESTORE" --project="$PROJECT" --format="value(status)"
+   ```
+
+4. Detach the old disk:
 
    ```bash
    gcloud compute instances detach-disk "$VM" --disk="$DISK" \
      --zone="$ZONE" --project="$PROJECT"
    ```
 
-5. Attach the restore disk with the device name the startup script expects:
+5. Delete it. A disk cannot be renamed, and while an old `pod-data` exists, `deploy.sh up` would attach it:
 
    ```bash
-   gcloud compute instances attach-disk "$VM" --disk="$RESTORE_DISK" \
+   gcloud compute disks delete "$DISK" --zone="$ZONE" --project="$PROJECT"
+   ```
+
+   Scheduled snapshots survive the delete (the policy keeps auto snapshots on source-disk delete), and the pre-restore snapshot holds the final state.
+
+6. Recreate `pod-data` from the chosen snapshot, with the backup policy attached from the start:
+
+   ```bash
+   gcloud compute disks create "$DISK" \
+     --source-snapshot=<snapshot-name> \
+     --resource-policies="$POLICY" \
+     --zone="$ZONE" --project="$PROJECT" --type=pd-balanced
+   ```
+
+7. Attach it with the device name the startup script expects:
+
+   ```bash
+   gcloud compute instances attach-disk "$VM" --disk="$DISK" \
      --device-name=pod-data-disk --zone="$ZONE" --project="$PROJECT"
    ```
 
    The device name is not the disk name. `startup.sh` mounts `/dev/disk/by-id/google-pod-data-disk` at `/mnt/pod-data`; any other device name leaves the container without data.
 
-6. Start the VM:
+8. Start the VM:
 
    ```bash
    gcloud compute instances start "$VM" --zone="$ZONE" --project="$PROJECT"
    ```
 
-7. Verify before trusting it:
+9. Verify before trusting it. First open a shell on the VM:
 
    ```bash
    gcloud compute ssh "$VM" --zone="$ZONE" --project="$PROJECT"
+   ```
+
+   Then, on the VM:
+
+   ```bash
    mountpoint /mnt/pod-data
    df -h /mnt/pod-data
    sudo ls -la /mnt/pod-data/pb_data
@@ -386,16 +467,9 @@ Restoring replaces the whole data disk: every write after the snapshot is lost.
 
    Then check the health endpoint and load the site and admin dashboard. If `/mnt/pod-data` is not a mountpoint, stop the service immediately (`sudo systemctl stop pocketbase.service`) so PocketBase does not initialise an empty database on the boot disk, and re-check the device name.
 
-8. Put the backup policy on the restored disk. The policy stays with the old disk, so without this step the disk now serving production has no snapshots:
+10. Confirm the policy is attached to the new disk (see [Backups](#backups)). It should end in `/pod-data-daily-backup`.
 
-   ```bash
-   gcloud compute disks add-resource-policies "$RESTORE_DISK" \
-     --resource-policies="$POLICY" --zone="$ZONE" --project="$PROJECT"
-   ```
-
-9. Keep the old `pod-data` disk until the restore is confirmed. To roll back, stop the VM, detach `$RESTORE_DISK`, attach `pod-data` with `--device-name=pod-data-disk`, and start.
-
-One follow-up: the disk now attached is named `pod-data-restore-*`, while `deploy.sh up` looks for a disk named `pod-data`. Before the next from-scratch provision, either recreate a disk named `pod-data` from a snapshot of the verified restore disk, or update `deploy.sh` and this runbook to the new name.
+To roll back, repeat the procedure with `$PRE_RESTORE` as the snapshot in step 6 (delete the restored `pod-data` first, as in steps 2, 4 and 5). Keep the pre-restore snapshot until the restore is confirmed good, then delete it; manual snapshots do not expire.
 
 ## Monitoring
 
@@ -447,7 +521,7 @@ Console:
 4. Condition: **is above** `80`, for **5 minutes**.
 5. Notification: the email channel above. Name the policy `cscs-dev-backend boot disk 80%`.
 
-On the 20 GB boot disk, 80% leaves about 4 GB free, which is roughly where the 2026 incident started failing.
+On the 20 GB boot disk, 80% leaves about 4 GB free. That is a heuristic starting threshold, not a measured failure point: the 2026 incident happened on the original 10 GB boot disk, and nothing records how much free space remained when it started failing. Tune it after watching real usage.
 
 ### Limits of these checks
 
@@ -461,4 +535,5 @@ These close #83's acceptance checks and are tracked on the issue:
 
 - Add the uptime check, email channel and alert policy.
 - Install the Ops Agent and add the 80% boot-disk policy.
+- Update the VM's `startup-script` metadata to the current `backend/startup.sh` (see [Update `startup.sh`](#update-startupsh)); the live copy lacks the #78 disk-space fixes.
 - Rehearse the restore once and update this runbook with the result.
