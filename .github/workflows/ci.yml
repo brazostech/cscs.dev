@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -28,6 +28,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: "npm"
+
+      - name: Check Node pins match .nvmrc
+        run: |
+          node_major="$(tr -d '[:space:]' < .nvmrc)"
+          grep -qx "FROM node:${node_major}-slim" Containerfile \
+            || { echo "Containerfile base image does not match .nvmrc (${node_major})"; exit 1; }
+          grep -qE "^[[:space:]]*NODE_VERSION[[:space:]]*=[[:space:]]*\"${node_major}\"[[:space:]]*$" netlify.toml \
+            || { echo "netlify.toml NODE_VERSION does not match .nvmrc (${node_major})"; exit 1; }
 
       - name: Install dependencies
         run: npm ci

@@ -24,7 +24,7 @@ npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
 ```
 
-Node version is pinned in `.nvmrc` (22). CI, the dev `Containerfile` and Netlify all follow it.
+Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfile` base image and `netlify.toml` `NODE_VERSION` must match it, and CI fails if they don't.
 
 ## Code Conventions
 
