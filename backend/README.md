@@ -4,14 +4,15 @@ PocketBase backend for the CSCS community website.
 
 ## Local Development
 
-PocketBase listens on port 8080. From the project root, run the committed binary (macOS arm64 only):
+PocketBase listens on port 8080. From the project root, install the pinned PocketBase for your OS and architecture (macOS or Linux, x64 or arm64; needs Node and `unzip`) and run it. `make pocketbase` verifies each download's SHA-256, writes the gitignored `backend/pocketbase`, and does nothing if that version is already there (an existing binary is kept if it reports the pinned version and is not re-hashed; delete it to force a reinstall). After pulling the change that stopped committing the binary, run `make pocketbase` again:
 
 ```bash
 cd backend
+make pocketbase
 ./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
 ```
 
-On other platforms, or to run everything in containers, use Podman Compose from the project root:
+On Windows, or to run everything in containers, use Podman Compose from the project root:
 
 ```bash
 podman-compose up --build -d pocketbase   # PocketBase only
@@ -87,7 +88,8 @@ Provisioning uses your SSH identity: `CSCS_SSH_USER` (default `whoami`) and `CSC
 
 - **Containerfile**: Multi-arch Alpine image with PocketBase binary + migrations baked in
 - **startup.sh**: VM cloud-init script — installs Podman, mounts persistent disk, creates Quadlet unit
-- **Makefile**: Build/push shortcuts for the container image
+- **Makefile**: `make pocketbase` (local binary) and build/push shortcuts for the container image
+- **scripts/pocketbase-download.mjs**: The pinned PocketBase version and SHA-256 checksums, and the verified download behind `make pocketbase` and `npm run test:pb`
 - **deploy.sh**: GCE VM lifecycle management (create/delete, preserves data)
 
 PocketBase serves HTTPS directly via Let's Encrypt at `https://api.cscs.dev`.

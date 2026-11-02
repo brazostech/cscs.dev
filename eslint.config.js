@@ -26,8 +26,9 @@ export default [
     },
   },
   {
-    // Node scripts and tests under backend/test (not the PocketBase JSVM).
-    files: ["backend/test/**/*.mjs"],
+    // Node scripts and tests under backend/test and backend/scripts (not the
+    // PocketBase JSVM).
+    files: ["backend/test/**/*.mjs", "backend/scripts/**/*.mjs"],
     languageOptions: {
       globals: Object.fromEntries(
         [

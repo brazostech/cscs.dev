@@ -20,8 +20,9 @@ podman-compose up --build -d pocketbase
 ```
 
 ```bash
-# Option B — committed binary (macOS arm64 only)
+# Option B — local binary (macOS or Linux; installs the pinned version)
 cd backend
+make pocketbase
 ./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
 ```
 

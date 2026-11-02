@@ -23,6 +23,7 @@ npm run test:run     # Vitest (single run)
 npm run test:pb      # PocketBase API rule tests (downloads PocketBase v0.34.0)
 npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
+make -C backend pocketbase # Install the pinned PocketBase at backend/pocketbase (gitignored, not committed)
 ```
 
 Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfile` base image and `netlify.toml` `NODE_VERSION` must match it, and CI fails if they don't.
@@ -147,6 +148,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 - **Architecture decisions**: `doc/adr/` (12 ADRs covering hosting, runtime, CI/CD, etc.)
 - **Backend setup & deployment**: `backend/README.md`
+- **PocketBase version and checksums**: `backend/scripts/pocketbase-download.mjs` (must match `backend/Containerfile`)
 - **Backend operations runbook**: `backend/RUNBOOK.md`
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`

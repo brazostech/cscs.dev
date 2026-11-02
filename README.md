@@ -24,6 +24,7 @@ The frontend is a static Astro site. [PocketBase](https://pocketbase.io/) is the
 ### Prerequisites
 
 - **Node 22.23.4 or newer** via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm), for running the site on the host.
+- **`make` and `unzip`** for Option A (preinstalled on macOS and most Linux distributions).
 - **Podman and `podman-compose`** for the container paths. Option A and the full host-based flow do not need them.
 
 The full-compose variant below runs both services in containers: it skips steps 1 and 4 and does not need Node on the host.
@@ -44,12 +45,13 @@ npm ci           # installs from package-lock.json
 
 Pick one of the two options below and leave it running while you develop.
 
-**Option A — the committed binary (macOS on Apple silicon only)**
+**Option A — a local binary (macOS or Linux, x64 or arm64)**
 
-The repo includes PocketBase 0.34.0 at `backend/pocketbase`, built for **macOS arm64**. On Linux, Windows or an Intel Mac, skip to Option B.
+The repo does not commit a PocketBase binary. `make pocketbase` installs the pinned version (0.34.0, the same one the container image uses) for your OS and architecture at `backend/pocketbase`, which is gitignored. It needs Node (step 1) and network access the first time. The download is SHA-256 checked before anything runs (an existing `backend/pocketbase` is kept if it reports the pinned version, and is not re-hashed). Re-running the target does nothing once the right version is in place; delete `backend/pocketbase` to force a reinstall. If you cloned before this change, the old committed binary is removed when you pull: run `make pocketbase` again. On Windows, use Option B.
 
 ```bash
 cd backend
+make pocketbase
 ./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
 ```
 
@@ -101,7 +103,7 @@ npm run dev
 
 ### 5. Create the PocketBase superuser
 
-**Option A — committed binary**
+**Option A — local binary**
 
 With a fresh `backend/pb_data/`, PocketBase prints a one-time install link in the terminal where the server is running:
 
@@ -133,7 +135,7 @@ PocketBase prints the host as `0.0.0.0`, which a browser cannot use. Replace it 
 http://0.0.0.0:8080/_/#/pbinstal/...   ->   http://localhost:8080/_/#/pbinstal/...
 ```
 
-Open the `localhost` link and create the superuser. If the link expired or you cannot retrieve it, create the account inside the running container — this runs the container's Linux binary, not the macOS binary on the host:
+Open the `localhost` link and create the superuser. If the link expired or you cannot retrieve it, create the account inside the running container — this runs the container's Linux binary, not the binary on the host:
 
 ```bash
 podman exec -it pocketbase pocketbase superuser create you@example.com 'a-long-password' --dir=/pb_data
@@ -182,7 +184,7 @@ npm run build
 npm run build-storybook
 ```
 
-`npm run test:pb` downloads PocketBase v0.34.0 from GitHub releases (SHA-256 checked, cached under `node_modules/.cache/pocketbase`), so it needs network access the first time and `unzip`. CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile` base image and `netlify.toml`'s `NODE_VERSION` agree on the Node major version, and that the PocketBase version agrees across the `Containerfile`, `podman-compose.yaml` and `backend/test/pocketbase-harness.mjs`. If you bump Node, change all three; if you bump PocketBase, change all three and the checksums in the harness. `main` only accepts pull requests whose `build` job and Netlify `deploy-preview` check pass (ADR [0012](doc/adr/0012-branch-protection-via-repository-ruleset.md)).
+`npm run test:pb` downloads PocketBase v0.34.0 from GitHub releases (SHA-256 checked, cached under `node_modules/.cache/pocketbase`), so it needs network access the first time and `unzip`. CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile` base image and `netlify.toml`'s `NODE_VERSION` agree on the Node major version, and that the PocketBase version agrees across the `Containerfile`, `podman-compose.yaml` and `backend/scripts/pocketbase-download.mjs`. If you bump Node, change all three; if you bump PocketBase, change all three and the checksums in `backend/scripts/pocketbase-download.mjs`, the one module that both `npm run test:pb` and `make pocketbase` download through. `main` only accepts pull requests whose `build` job and Netlify `deploy-preview` check pass (ADR [0012](doc/adr/0012-branch-protection-via-repository-ruleset.md)).
 
 ## Project structure
 
@@ -198,10 +200,10 @@ The main tracked files and directories:
 ├── .storybook/                    # Storybook config (main.ts, preview.ts)
 ├── backend/
 │   ├── pb_migrations/             # PocketBase schema migrations (11 files)
+│   ├── scripts/                   # pinned PocketBase download + checksum check (make pocketbase)
 │   ├── test/                      # PocketBase API rule tests (npm run test:pb)
-│   ├── pocketbase                 # PocketBase 0.34.0 binary, macOS arm64
 │   ├── Containerfile              # backend container image
-│   ├── Makefile                   # image build/push targets
+│   ├── Makefile                   # make pocketbase, image build/push targets
 │   ├── deploy.sh                  # GCE VM lifecycle
 │   ├── startup.sh                 # VM cloud-init and Quadlet unit
 │   ├── MIGRATIONS.md              # migration workflow and schema notes

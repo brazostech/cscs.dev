@@ -43,8 +43,8 @@ jobs:
           pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
           [ -n "$pb" ] \
             || { echo "ARG POCKETBASE_VERSION not found in backend/Containerfile"; exit 1; }
-          grep -Fxq "export const PB_VERSION = \"${pb}\";" backend/test/pocketbase-harness.mjs \
-            || { echo "PB_VERSION in backend/test/pocketbase-harness.mjs does not match Containerfile (${pb})"; exit 1; }
+          grep -Fxq "export const PB_VERSION = \"${pb}\";" backend/scripts/pocketbase-download.mjs \
+            || { echo "PB_VERSION in backend/scripts/pocketbase-download.mjs does not match Containerfile (${pb})"; exit 1; }
           grep -Eq "^[[:space:]]*POCKETBASE_VERSION:[[:space:]]*\"?${pb//./\\.}\"?[[:space:]]*$" podman-compose.yaml \
             || { echo "POCKETBASE_VERSION in podman-compose.yaml does not match Containerfile (${pb})"; exit 1; }
 
@@ -67,10 +67,22 @@ jobs:
         uses: actions/cache@v6
         with:
           path: node_modules/.cache/pocketbase
-          key: pocketbase-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/test/pocketbase-harness.mjs') }}
+          key: pocketbase-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/scripts/pocketbase-download.mjs') }}
 
       - name: Run PocketBase API rule tests
         run: npm run test:pb
+
+      - name: Install PocketBase with make
+        run: |
+          out="$(make --no-print-directory -C backend pocketbase)"
+          echo "$out"
+          case "$out" in Installed*) ;; *) echo "first run should install"; exit 1;; esac
+          out="$(make --no-print-directory -C backend pocketbase)"
+          echo "$out"
+          case "$out" in *"already installed"*) ;; *) echo "second run should be a no-op"; exit 1;; esac
+          pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
+          [ "$(backend/pocketbase --version)" = "pocketbase version ${pb}" ] \
+            || { echo "backend/pocketbase does not report ${pb}"; exit 1; }
 
       - name: Run build
         run: npm run build
