@@ -62,7 +62,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 ```
 src/
   components/         # React components
-    catalyst/         # UI kit — don't modify, use as-is
+    catalyst/         # UI kit — wrap by default, edit only with a stated reason
   content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
   lib/                # PocketBase client and helpers (pocketbase.ts)
@@ -94,7 +94,7 @@ Located in `src/components/catalyst/`. Use these for UI consistency:
 - `Heading`, `Text` — Typography
 - `Dialog`, `Alert` — Modals
 
-A hook soft-asks before editing catalyst/ files. Prefer wrapping over modifying.
+Wrap Catalyst components in `src/components/` by default. Edit a file in `src/components/catalyst/` directly only when a wrapper cannot express the change, and state the reason in the PR or commit message. A hook soft-asks before editing catalyst/ files.
 
 ## Key Patterns
 
@@ -119,7 +119,7 @@ Migration files in `backend/pb_migrations/` with timestamp prefixes:
 
 ### Blog Posts
 
-Markdown in `src/content/blog/` with required frontmatter: `title`, `description`, `pubDate`, `author`, `tags`.
+Markdown in `src/content/blog/` with required frontmatter: `title`, `description`, `pubDate`, `author`. `tags` is optional and defaults to `[]`.
 
 ### Date Handling
 

@@ -4,26 +4,36 @@ PocketBase backend for the CSCS community website.
 
 ## Local Development
 
-Start PocketBase alongside the frontend with Podman Compose from the project root:
+PocketBase listens on port 8080. From the project root, run the committed binary (macOS arm64 only):
 
 ```bash
-podman-compose up --build -d
+cd backend
+./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
 ```
 
-- PocketBase: `http://localhost:8090`
-- Admin dashboard: `http://localhost:8090/_/`
-- Frontend: `http://localhost:4321`
+On other platforms, or to run everything in containers, use Podman Compose from the project root:
+
+```bash
+podman-compose up --build -d pocketbase   # PocketBase only
+podman-compose up --build -d              # PocketBase + frontend
+```
+
+- PocketBase: `http://localhost:8080`
+- Admin dashboard: `http://localhost:8080/_/`
+- Frontend: `http://localhost:4321` (run `npm run dev` from the project root unless you started the full Compose stack)
+
+See the root `README.md` for the full local setup, including the superuser and moderator steps.
 
 ## Collections
 
-| Collection | Purpose                                     | Public Read   | Write Access                   |
-| ---------- | ------------------------------------------- | ------------- | ------------------------------ |
-| `users`    | Authentication (email/password)             | No            | Self-registration, self-update |
-| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                |
-| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Self only                      |
-| `books`    | Book club reading list                      | Yes           | Moderators only                |
+| Collection | Purpose                                     | Public Read   | Write Access                      |
+| ---------- | ------------------------------------------- | ------------- | --------------------------------- |
+| `users`    | Authentication (email/password)             | No            | Self-registration, self-update    |
+| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                   |
+| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Authenticated create; self delete |
+| `books`    | Book club reading list                      | Yes           | Moderators only                   |
 
-Roles: `user` (default), `moderator` (set via admin dashboard). See `doc/authentication.md` for details.
+Roles: `user` (default), `moderator` (set via admin dashboard). See [`../doc/authentication.md`](../doc/authentication.md) for details. RSVP create currently accepts any authenticated user; #84 tightens it to the authenticated record.
 
 ## Migrations
 
