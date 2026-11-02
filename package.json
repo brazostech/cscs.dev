@@ -1,6 +1,9 @@
 {
   "name": "cscs.dev",
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
@@ -8,6 +11,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "astro check",
     "lint": "eslint .",
     "test": "vitest",
     "test:run": "vitest run",
@@ -36,32 +41,34 @@
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@chromatic-com/storybook": "^5.0.2",
+    "@storybook/addon-a11y": "^10.3.3",
+    "@storybook/addon-docs": "^10.3.3",
+    "@storybook/addon-onboarding": "^10.3.3",
+    "@storybook/addon-vitest": "^10.3.3",
+    "@storybook/react-vite": "^10.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/browser-playwright": "^4.0.14",
+    "@vitest/coverage-v8": "^4.1.1",
     "eslint": "^9.39.4",
     "eslint-plugin-astro": "^1.6.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-storybook": "^10.3.3",
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",
+    "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "typescript-eslint": "^8.57.1",
-    "vitest": "^4.1.1",
     "storybook": "^10.3.3",
-    "@storybook/react-vite": "^10.3.3",
-    "@chromatic-com/storybook": "^5.0.2",
-    "@storybook/addon-vitest": "^10.3.3",
-    "@storybook/addon-a11y": "^10.3.3",
-    "@storybook/addon-docs": "^10.3.3",
-    "@storybook/addon-onboarding": "^10.3.3",
-    "eslint-plugin-storybook": "^10.3.3",
-    "playwright": "^1.58.2",
-    "@vitest/browser-playwright": "^4.0.14",
-    "@vitest/coverage-v8": "^4.1.1"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1",
+    "vitest": "^4.1.1"
   }
 }

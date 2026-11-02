@@ -17,3 +17,4 @@ To propose a new ADR, copy [template.md](template.md) and fill in the sections.
 | [0009](0009-ci-cd-github-actions-and-netlify.md)            | CI/CD — GitHub Actions and Netlify            | Accepted |
 | [0010](0010-backend-deployment-via-manual-script.md)        | Backend Deployment via Manual Script          | Accepted |
 | [0011](0011-local-development-with-podman-compose.md)       | Local Development with Podman Compose         | Accepted |
+| [0012](0012-branch-protection-via-repository-ruleset.md)    | Branch Protection via Repository Ruleset      | Accepted |

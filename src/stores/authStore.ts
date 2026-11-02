@@ -17,16 +17,9 @@ export function useAuth() {
     setIsLoading(false);
 
     // Subscribe to auth changes
-    const unsubscribe = onAuthChange((authUser) => {
+    onAuthChange((authUser) => {
       setUser(authUser);
     });
-
-    return () => {
-      // Cleanup
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
-    };
   }, []);
 
   return {

@@ -85,6 +85,11 @@ up() {
         echo "💾  Found existing disk '$DISK_NAME'. Attaching..."
         # Note: We must specify device-name so the startup script finds /dev/disk/by-id/google-pod-data-disk
         DISK_FLAG="--disk=name=$DISK_NAME,device-name=${DISK_NAME}-disk,auto-delete=no"
+        # The backup policy is only set at disk creation; make sure an
+        # existing disk has it too (no-op error if already attached).
+        gcloud compute disks add-resource-policies $DISK_NAME \
+            --resource-policies=pod-data-daily-backup \
+            --zone=$ZONE --project=$PROJECT --quiet 2>/dev/null || true
     else
         echo "💾  Disk '$DISK_NAME' not found. Creating new..."
         DISK_FLAG="--create-disk=name=$DISK_NAME,size=10GB,type=pd-balanced,device-name=${DISK_NAME}-disk,auto-delete=no,disk-resource-policy=pod-data-daily-backup"
@@ -95,6 +100,8 @@ up() {
         --image-family=ubuntu-2404-lts-amd64 \
         --image-project=ubuntu-os-cloud \
         --machine-type=e2-micro \
+        --boot-disk-size=20GB \
+        --boot-disk-type=pd-standard \
         --tags=https-server \
         --scopes=cloud-platform \
         --address=$STATIC_IP \
