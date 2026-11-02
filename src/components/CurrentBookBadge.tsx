@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { getCurrentBook, type BookData } from "../lib/pocketbase";
+import { getCurrentBook } from "../lib/pocketbase";
+import type { BookRecord } from "../lib/types";
 
 export default function CurrentBookBadge() {
-  const [book, setBook] = useState<BookData | null>(null);
+  const [book, setBook] = useState<BookRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
