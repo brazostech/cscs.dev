@@ -129,17 +129,17 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 - **Branches**: one branch per worktree, descriptive names (`fix-event-date-bug`, `feat-book-club-page`)
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
-- **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. Every change to `main` goes through a PR: the `main` ruleset rejects direct pushes, force-pushes and deletion (ADR 0012). Repository admins can bypass the ruleset on a PR as an emergency valve; do not use it to merge past a failing `build`.
-- **Merging**: squash only, and the PR title and body become the commit subject and message on `main`, so the PR title must be a Conventional Commit (`feat:`, `fix:`, `docs:`, ...) and the body should read as a commit message. Nothing enforces this; follow it. Head branches are deleted automatically on merge. Auto-merge is allowed.
-- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. The `build` check (that whole job) must pass before merge. Netlify's `deploy-preview` is not required.
+- **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. `main` takes changes only through PRs (ruleset, ADR 0012).
+- **Merging**: squash only. The PR title becomes the commit subject on `main`, so it must be a Conventional Commit; the body becomes the commit message. Branches delete on merge.
+- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
 
 ## Boundaries
 
 **Free** (no confirmation needed): read files, run tests/lint/build, git status/log/diff, search code
 
-**Ask first** (confirm with user): git push, create/merge PRs, modify CI config, delete files/branches, run deployment commands
+**Ask first** (confirm with user): git push, create/merge PRs (enabling auto-merge counts as merging), modify CI config, delete files/branches, run deployment commands
 
-**Forbidden**: store secrets in code, skip pre-commit hooks (`--no-verify`), force-push to main, modify `node_modules/` or `dist/`
+**Forbidden**: store secrets in code, skip pre-commit hooks (`--no-verify`), force-push to main, bypass the `main` ruleset (`gh pr merge --admin`), modify `node_modules/` or `dist/`
 
 ## References
 
