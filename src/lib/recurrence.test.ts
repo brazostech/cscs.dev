@@ -2,7 +2,7 @@
  * Tests for recurring-event helpers.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { generateRecurringDates, generateSeriesId } from "./recurrence";
 
 describe("generateSeriesId", () => {
@@ -68,11 +68,36 @@ describe("generateRecurringDates", () => {
     expect(dates).toEqual(["2026-01-01"]);
   });
 
-  it("keeps weekly dates stable across a DST change", () => {
-    // US clocks spring forward on 2026-03-08
-    const dates = generateRecurringDates("2026-03-01", "weekly", 3);
+  describe("across a DST change", () => {
+    // Use a real DST zone so the test does not depend on the CI machine's
+    // timezone (CI runs in UTC), and restore it so other test files are
+    // unaffected.
+    const originalTz = process.env.TZ;
 
-    expect(dates).toEqual(["2026-03-01", "2026-03-08", "2026-03-15"]);
+    beforeEach(() => {
+      process.env.TZ = "America/Chicago";
+    });
+
+    afterEach(() => {
+      if (originalTz === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTz;
+      }
+    });
+
+    it("keeps weekly dates on the same weekday when clocks fall back", () => {
+      // US clocks fall back on 2026-11-01; adding 7 * 24h of milliseconds in
+      // local time would land on 2026-10-31 23:00 and give the wrong date.
+      const dates = generateRecurringDates("2026-10-25", "weekly", 4);
+
+      expect(dates).toEqual([
+        "2026-10-25",
+        "2026-11-01",
+        "2026-11-08",
+        "2026-11-15",
+      ]);
+    });
   });
 
   describe("monthly clamping", () => {

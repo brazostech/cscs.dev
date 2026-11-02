@@ -67,10 +67,19 @@ function describeSeriesFailure(
     return `${base} No events were created.`;
   }
   if (remaining.length === 0) {
-    return `${base} The ${createdCount} event(s) already created were removed, so nothing was saved. Please try again.`;
+    const removed =
+      createdCount === 1
+        ? "The 1 event already created was removed"
+        : `The ${createdCount} events already created were removed`;
+    return `${base} ${removed}, so nothing was saved. Please try again.`;
   }
-  const list = remaining.map((e) => `${e.date} (id ${e.id})`).join(", ");
-  return `${base} Cleanup failed: ${remaining.length} of ${createdCount} already-created events could not be removed and still exist: ${list}. Delete them from the events list before retrying.`;
+  const n = remaining.length;
+  const stuck =
+    n === 1
+      ? "1 already-created event could not be removed and still exists"
+      : `${n} already-created events could not be removed and still exist`;
+  const dates = remaining.map((e) => e.date).join(", ");
+  return `${base} Cleanup failed: ${stuck}: ${dates}. Delete ${n === 1 ? "it" : "them"} from the events list before retrying.`;
 }
 
 export default function EventForm({

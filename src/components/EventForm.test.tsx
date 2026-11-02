@@ -408,6 +408,37 @@ describe("EventForm", () => {
       expect(onSuccess).toHaveBeenCalled();
     });
 
+    it("creates a monthly series from the 31st with clamped dates", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      render(<EventForm onSuccess={onSuccess} />);
+
+      await user.type(screen.getByLabelText(/title/i), "Monthly Event");
+      await user.click(screen.getByLabelText(/create recurring event/i));
+      await user.selectOptions(screen.getByLabelText(/repeat/i), "monthly");
+      await user.type(screen.getByLabelText(/start date/i), "2026-01-31");
+      await user.type(screen.getByLabelText(/^time \*/i), "18:00");
+      await user.type(screen.getByLabelText(/^location \*/i), "Test Location");
+
+      // Preview shows the clamped last date
+      expect(screen.getByText("2026-04-30")).toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole("button", { name: /create 4 events/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockCreate).toHaveBeenCalledTimes(4);
+      });
+      expect(mockCreate.mock.calls.map((call) => call[0].date)).toEqual([
+        "2026-01-31",
+        "2026-02-28",
+        "2026-03-31",
+        "2026-04-30",
+      ]);
+      expect(onSuccess).toHaveBeenCalled();
+    });
+
     it("updates existing event without creating new ones", async () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
@@ -612,15 +643,18 @@ describe("EventForm", () => {
       expect(
         screen.getByText(/failed to create event 3 of 4/i),
       ).toBeInTheDocument();
-      expect(screen.getByText(/nothing was saved/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/the 2 events already created were removed/i),
+      ).toBeInTheDocument();
       expect(onSuccess).not.toHaveBeenCalled();
       expect(
         screen.getByRole("button", { name: /create 4 events/i }),
       ).not.toBeDisabled();
     });
 
-    it("tells the user which records remain when a cleanup delete fails", async () => {
+    it("tells the user which events remain when a cleanup delete fails", async () => {
       const user = userEvent.setup();
+      const onSuccess = vi.fn();
       failOnThirdCreate();
       mockDelete.mockImplementation((id: string) =>
         id === "evt_1"
@@ -628,7 +662,7 @@ describe("EventForm", () => {
           : Promise.resolve(true),
       );
 
-      render(<EventForm />);
+      render(<EventForm onSuccess={onSuccess} />);
       await fillAndSubmitRecurring(user);
 
       await waitFor(() => {
@@ -637,9 +671,30 @@ describe("EventForm", () => {
 
       // Every record is attempted even though the first delete failed
       expect(mockDelete).toHaveBeenCalledTimes(2);
-      const message = screen.getByText(/cleanup failed/i).textContent ?? "";
-      expect(message).toContain("2026-01-01 (id evt_1)");
-      expect(message).not.toContain("evt_2");
+      expect(screen.getByText(/cleanup failed/i).textContent).toBe(
+        "Failed to create event 3 of 4: Server exploded. Cleanup failed: 1 already-created event could not be removed and still exists: 2026-01-01. Delete it from the events list before retrying.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("lists every remaining event by date when all cleanup deletes fail", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      failOnThirdCreate();
+      mockDelete.mockRejectedValue(new Error("delete failed"));
+
+      render(<EventForm onSuccess={onSuccess} />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/cleanup failed/i)).toBeInTheDocument();
+      });
+
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(screen.getByText(/cleanup failed/i).textContent).toBe(
+        "Failed to create event 3 of 4: Server exploded. Cleanup failed: 2 already-created events could not be removed and still exist: 2026-01-01, 2026-01-08. Delete them from the events list before retrying.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
     });
 
     it("deletes nothing when the first occurrence fails", async () => {
