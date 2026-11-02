@@ -139,7 +139,7 @@ Recovery order:
    gcloud compute instances start "$VM" --zone="$ZONE" --project="$PROJECT"
    ```
 
-   The boot disk has the same name as the VM and is 20 GB today. A disk can only grow, never shrink, and a bigger disk costs more every month, so this buys time rather than fixing the cause: free space as in [Free space safely](#free-space-safely) once you are in.
+   The boot disk has the same name as the VM and is 20 GB today. A disk can only grow, never shrink, and a bigger disk costs more every month, so this buys time rather than fixing the cause. On a completely full root the guest may be unable to grow the filesystem, so check the serial output or `df -h /` afterwards, and fall back to the next option if it did not take effect: free space as in [Free space safely](#free-space-safely) once you are in.
 
 3. If SSH still fails, read the serial output. It is read-only and always available, and usually names the cause directly:
 
@@ -259,9 +259,10 @@ Open a shell on the VM:
 gcloud compute ssh "$VM" --zone="$ZONE" --project="$PROJECT"
 ```
 
-Then, on the VM, set the digest recorded in step 1 of [Deploy an image](#deploy-an-image) and point the unit at it:
+Then, on the VM, log in to the registry (the token from the last deploy has expired), set the digest recorded in step 1 of [Deploy an image](#deploy-an-image) and point the unit at it:
 
 ```bash
+gcloud auth print-access-token | sudo podman login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
 OLD_DIGEST=sha256:...   # recorded in step 1 of Deploy an image
 
 sudo podman pull us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST}
@@ -285,15 +286,15 @@ Check that the running image is the one you intended:
 
 ```bash
 sudo podman ps --format '{{.Image}} {{.ImageID}}'
-sudo podman image inspect --format '{{.Digest}}' us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST}
+sudo podman image inspect --format '{{.ID}} {{.Digest}}' us-central1-docker.pkg.dev/cscsdotdev/website/backend@${OLD_DIGEST}
 ```
 
-The `ps` output must show the old image, not `:latest`. Then run the verify checks from [Deploy an image](#deploy-an-image).
+The image ID in the `ps` output must equal the ID from `inspect`, and the image name must be the digest form, not `:latest`. Then run the verify checks from [Deploy an image](#deploy-an-image).
 
 Three limits:
 
 - **An image rollback does not roll back migrations.** PocketBase records applied migrations in the database. If the release added or changed a migration, the older image will report missing migrations and fail to start against the newer schema. In that case restore the data disk from a snapshot instead (see [Restore `pod-data` from a snapshot](#restore-pod-data-from-a-snapshot)).
-- **The pin is a manual edit on the VM.** The `image:` line in `pocketbase.yaml` stays on the old digest until you change it back. When a fixed image is pushed, restore the `:latest` reference in `pocketbase.yaml` (or the next deploy will not take effect), reload, and restart. A rebuilt VM regenerates the file from `startup.sh` with `:latest`, and the registry's `:latest` still points at the bad image until you push a fix.
+- **The pin does not survive a reboot.** `startup.sh` rewrites `pocketbase.yaml` with `image: ...:latest` on every boot, so any reboot (including the stop/start recovery above) silently undoes the pin and pulls the bad image again. Do not reboot while rolled back, and push a fixed image promptly. While the pin is in place, the `image:` line stays on the old digest until you change it back: when a fixed image is pushed, restore the `:latest` reference in `pocketbase.yaml` (or the next deploy will not take effect), reload, and restart.
 - **The old image must still be available.** A plain `podman system prune -f` after the deploy deletes it locally; the `pull` above fetches it from the registry, which keeps every pushed digest.
 
 ## Update `startup.sh`
@@ -321,9 +322,9 @@ gcloud compute instances add-metadata "$VM" --zone="$ZONE" --project="$PROJECT" 
 - Verify that the stored script matches the repository. From the repository root, no output from `diff` means they are identical:
 
   ```bash
-  diff <(gcloud compute instances describe "$VM" --zone="$ZONE" --project="$PROJECT" \
-    --format=json | jq -r '.metadata.items[] | select(.key == "startup-script") | .value') \
-    backend/startup.sh && echo "metadata matches backend/startup.sh"
+  gcloud compute instances describe "$VM" --zone="$ZONE" --project="$PROJECT" \
+    --format=json | jq -r '.metadata.items[] | select(.key == "startup-script") | .value' \
+    | diff - backend/startup.sh && echo "metadata matches backend/startup.sh"
   ```
 
   As of 2026-11-02 this reports differences: the live metadata is the old script, without the journald cap, snap cache purge, `apt-get clean` or `ip_forward` sysctl added in #78.
@@ -404,7 +405,7 @@ Restoring replaces the whole data disk: every write after the snapshot is lost. 
      --source-disk="$DISK" --source-disk-zone="$ZONE" --project="$PROJECT"
    ```
 
-   Wait until the snapshot is `READY` before going on:
+   Do not go on until the snapshot is `READY`: it is the only copy of the current data once step 5 runs.
 
    ```bash
    gcloud compute snapshots describe "$PRE_RESTORE" --project="$PROJECT" --format="value(status)"
@@ -469,7 +470,7 @@ Restoring replaces the whole data disk: every write after the snapshot is lost. 
 
 10. Confirm the policy is attached to the new disk (see [Backups](#backups)). It should end in `/pod-data-daily-backup`.
 
-To roll back, repeat the procedure with `$PRE_RESTORE` as the snapshot in step 6 (delete the restored `pod-data` first, as in steps 2, 4 and 5). Keep the pre-restore snapshot until the restore is confirmed good, then delete it; manual snapshots do not expire.
+To roll back, repeat the procedure with the pre-restore snapshot as `<snapshot-name>` in step 6, using its literal name (`pod-data-pre-restore-<ts>`, from `gcloud compute snapshots list`). Do not repeat step 3 as written, because it would assign a new `PRE_RESTORE` and snapshot the bad restored disk; run steps 2, 4, 5 and 6 to 10. Keep the pre-restore snapshot until the restore is confirmed good, then delete it; manual snapshots do not expire.
 
 ## Monitoring
 
