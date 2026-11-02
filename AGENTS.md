@@ -129,20 +129,21 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 - **Branches**: one branch per worktree, descriptive names (`fix-event-date-bug`, `feat-book-club-page`)
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
-- **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`.
-- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. All must pass before merge.
+- **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. `main` takes changes only through PRs (ruleset, ADR 0012).
+- **Merging**: squash only. The PR title becomes the commit subject on `main`, so it must be a Conventional Commit; the body becomes the commit message. Branches delete on merge.
+- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
 
 ## Boundaries
 
 **Free** (no confirmation needed): read files, run tests/lint/build, git status/log/diff, search code
 
-**Ask first** (confirm with user): git push, create/merge PRs, modify CI config, delete files/branches, run deployment commands
+**Ask first** (confirm with user): git push, create/merge PRs (enabling auto-merge counts as merging), modify CI config, delete files/branches, run deployment commands
 
-**Forbidden**: store secrets in code, skip pre-commit hooks (`--no-verify`), force-push to main, modify `node_modules/` or `dist/`
+**Forbidden**: store secrets in code, skip pre-commit hooks (`--no-verify`), force-push to main, bypass the `main` ruleset (`gh pr merge --admin`), modify `node_modules/` or `dist/`
 
 ## References
 
-- **Architecture decisions**: `doc/adr/` (11 ADRs covering hosting, runtime, CI/CD, etc.)
+- **Architecture decisions**: `doc/adr/` (12 ADRs covering hosting, runtime, CI/CD, etc.)
 - **Backend setup & deployment**: `backend/README.md`
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
