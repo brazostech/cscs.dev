@@ -61,5 +61,7 @@ Netlify watches the same repository and deploys independently when it detects a 
 ## Amendment (2026-11-02, #119)
 
 - `setup-node` now runs with `check-latest: true`. Without it, setup-node accepted any Node 22 in the runner's tool cache, so a runner cached at 22.23.3 failed `engines.node >=22.23.4` (main run 41374299584, PR #130 run 41482663555). With it, setup-node resolves the newest 22.x and downloads it when the cache is older.
-- A step right after setup-node fails the job if `node --version` does not satisfy `engines.node`, so a stale Node fails with a clear message instead of an `EBADENGINE` warning later. It supports only a `>=X.Y.Z` range and fails on any other form.
+- A step right after setup-node fails the job if the running Node does not satisfy `engines.node`, so a stale Node fails with a clear message instead of an `EBADENGINE` warning later. It supports only a `>=X.Y.Z` range and fails on any other form.
+- `check-latest` fails open: if setup-node cannot fetch the Node release manifest, it keeps the cached Node. The engines step then fails the job when that Node is too old, and the job needs a re-run.
+- The `Containerfile` and `netlify.toml` still state only the major version and float on `22`, as the #81 amendment notes.
 - Cost: when the cache is stale, setup-node downloads Node, which adds seconds to the run.
