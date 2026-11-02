@@ -26,5 +26,5 @@ Merges are squash-only, using the pull request title and body. Auto-merge and "u
 - History is linear, one commit per pull request. The title becomes the commit subject, so it should be a Conventional Commit, but nothing enforces this.
 - Because the checks are not strict, two pull requests that each pass can merge in sequence and break `main`. CI reports this only afterwards. This is accepted at the current scale.
 - Review is by convention only, and the admin bypass depends on trusting admins.
-- A fork pull request waits for a maintainer to approve its workflow run before `build` reports.
+- A first-time contributor's fork pull request waits for a maintainer to approve its workflow run before `build` reports.
 - Changes to the ruleset are not reviewed in git, so they need a new or amended ADR.
