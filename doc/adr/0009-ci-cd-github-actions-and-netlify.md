@@ -38,5 +38,5 @@ Netlify watches the same repository and deploys independently when it detects a 
 
 ## Amendment (2026-11-01, #80)
 
-- [ADR 0012](0012-branch-protection-via-repository-ruleset.md) protects `main` with a ruleset: changes land only through squash-merged pull requests whose `build` check passed. This replaces the known gap above that "a push to `main` can fail CI but still deploy to Netlify". Only an admin bypass of the ruleset can now deploy a change that failed CI.
+- [ADR 0012](0012-branch-protection-via-repository-ruleset.md) protects `main` with a ruleset: changes land only through squash-merged pull requests whose `build` check passed. This replaces the known gap above that "a push to `main` can fail CI but still deploy to Netlify". A change can still deploy without a passing CI run on its final merged state, through an admin bypass or because the `build` check is not strict (see ADR 0012).
 - The Netlify `deploy-preview` check is deliberately not required; see ADR 0012.
