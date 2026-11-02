@@ -14,11 +14,13 @@ import {
   cancelRsvp,
 } from "../lib/pocketbase";
 import type { EventRecord, RsvpRecord } from "../lib/types";
+import { useLatestRequest } from "../lib/useLatestRequest";
 import { useAuth } from "../stores/authStore";
 import { BadgeButton } from "./catalyst/badge";
 import { Button } from "./catalyst/button";
-import { Heading, Subheading } from "./catalyst/heading";
+import { Heading } from "./catalyst/heading";
 import { Text } from "./catalyst/text";
+import { Notice, Spinner, errorMessage } from "./ListStates";
 
 /** Format a `YYYY-MM-DD` string without the UTC shift of `new Date(string)`. */
 function formatEventDate(date: string): string {
@@ -29,37 +31,6 @@ function formatEventDate(date: string): string {
     month: "short",
     day: "numeric",
   });
-}
-
-function errorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
-}
-
-function Spinner() {
-  return (
-    <div className="py-12 text-center">
-      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"></div>
-      <Text className="mt-4">Loading events...</Text>
-    </div>
-  );
-}
-
-function Notice({
-  icon,
-  title,
-  message,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  message: string;
-}) {
-  return (
-    <div className="py-12 text-center">
-      {icon}
-      <Subheading level={3}>{title}</Subheading>
-      <Text className="mt-1">{message}</Text>
-    </div>
-  );
 }
 
 interface EventRowProps {
@@ -197,7 +168,10 @@ export default function EventsList() {
   const [userRsvps, setUserRsvps] = useState<Record<string, RsvpRecord>>({});
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
+  const beginLoad = useLatestRequest();
+
   const loadEvents = useCallback(async () => {
+    const isLatest = beginLoad();
     try {
       const loaded = await pb
         .collection<EventRecord>("events")
@@ -213,15 +187,17 @@ export default function EventsList() {
         ]);
       }
 
+      if (!isLatest()) return;
       setRsvpCounts(counts);
       setUserRsvps(rsvps);
       setError(null);
       setEvents(loaded);
     } catch (err) {
+      if (!isLatest()) return;
       console.error("Error loading events:", err);
       setError(errorMessage(err, "Failed to load events"));
     }
-  }, []);
+  }, [beginLoad]);
 
   // Same gate as before the port: no signed-in user means the login page.
   useEffect(() => {
@@ -305,7 +281,7 @@ export default function EventsList() {
       />
     );
   } else if (events === null) {
-    content = <Spinner />;
+    content = <Spinner label="Loading events..." />;
   } else if (events.length === 0) {
     content = (
       <Notice
@@ -392,7 +368,7 @@ export default function EventsList() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <Heading>Events</Heading>
           <Text className="mt-2">
@@ -400,7 +376,7 @@ export default function EventsList() {
           </Text>
         </div>
         {isModerator && (
-          <Button color="indigo" href="/app/create-event">
+          <Button color="indigo" href="/app/create-event" className="shrink-0">
             <PlusIcon data-slot="icon" />
             Create Event
           </Button>

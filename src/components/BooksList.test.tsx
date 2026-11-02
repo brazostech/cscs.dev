@@ -9,7 +9,7 @@
  * - Logged-out redirect to the login page, with nothing fetched
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import BooksList from "./BooksList";
@@ -409,6 +409,46 @@ describe("BooksList", () => {
       await user.click(screen.getByRole("button", { name: /^Delete:/ }));
 
       expect(await screen.findByText("No books")).toBeInTheDocument();
+    });
+
+    it("ignores a slow earlier reload that resolves after a newer one", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const a = createMockBook({ title: "Book A" });
+      const b = createMockBook({ title: "Book B" });
+      const c = createMockBook({ title: "Book C" });
+      let releaseA: (books: BookRecord[]) => void = () => {};
+      mockGetFullList
+        .mockResolvedValueOnce([a, b, c])
+        // Reload after deleting A: held, and it still lists B.
+        .mockReturnValueOnce(
+          new Promise<BookRecord[]>((resolve) => {
+            releaseA = resolve;
+          }),
+        )
+        // Reload after deleting B: arrives first.
+        .mockResolvedValueOnce([c]);
+
+      render(<BooksList />);
+      await screen.findByText("Book A");
+
+      await user.click(
+        within(cardFor("Book A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      await user.click(
+        within(cardFor("Book B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(screen.queryByText("Book B")).toBeNull());
+
+      // Resolve A's stale reload and let React flush it.
+      await act(async () => {
+        releaseA([b, c]);
+      });
+
+      expect(screen.queryByText("Book B")).toBeNull();
+      expect(screen.queryByText("Book A")).toBeNull();
+      expect(screen.getByText("Book C")).toBeInTheDocument();
     });
 
     it("does not delete when the confirmation is declined", async () => {

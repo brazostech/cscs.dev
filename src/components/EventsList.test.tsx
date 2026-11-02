@@ -10,10 +10,11 @@
  * - Logged-out redirect to the login page
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import EventsList from "./EventsList";
+import type { EventRecord } from "../lib/types";
 import {
   createMockEvent,
   createMockModerator,
@@ -509,6 +510,46 @@ describe("EventsList", () => {
       await waitFor(() => expect(screen.queryByText("Remove")).toBeNull());
       expect(screen.getByText("Keep")).toBeInTheDocument();
       expect(mockGetFullList).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores a slow earlier reload that resolves after a newer one", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const a = createMockEvent({ title: "Event A" });
+      const b = createMockEvent({ title: "Event B" });
+      const c = createMockEvent({ title: "Event C" });
+      let releaseA: (events: EventRecord[]) => void = () => {};
+      mockGetFullList
+        .mockResolvedValueOnce([a, b, c])
+        // Reload after deleting A: held, and it still lists B.
+        .mockReturnValueOnce(
+          new Promise<EventRecord[]>((resolve) => {
+            releaseA = resolve;
+          }),
+        )
+        // Reload after deleting B: arrives first.
+        .mockResolvedValueOnce([c]);
+
+      render(<EventsList />);
+      await screen.findByText("Event A");
+
+      await user.click(
+        within(rowFor("Event A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      await user.click(
+        within(rowFor("Event B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(screen.queryByText("Event B")).toBeNull());
+
+      // Resolve A's stale reload and let React flush it.
+      await act(async () => {
+        releaseA([b, c]);
+      });
+
+      expect(screen.queryByText("Event B")).toBeNull();
+      expect(screen.queryByText("Event A")).toBeNull();
+      expect(screen.getByText("Event C")).toBeInTheDocument();
     });
 
     it("does not delete when the confirmation is declined", async () => {

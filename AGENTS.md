@@ -95,8 +95,11 @@ Located in `src/components/catalyst/`. Use these for UI consistency:
 
 - `Button`, `Input`, `Textarea`, `Select` — Form elements
 - `Field`, `Label`, `ErrorMessage` — Form field wrappers
-- `Heading`, `Text` — Typography
+- `Heading`, `Subheading`, `Text` — Typography
+- `Badge`, `BadgeButton` — Status labels and small inline actions (Edit, Delete, RSVP)
 - `Dialog`, `Alert` — Modals
+
+List pages share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty and error states, `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Call the hook's `begin()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one.
 
 Wrap Catalyst components in `src/components/` by default. Edit a file in `src/components/catalyst/` directly only when a wrapper cannot express the change, and state the reason in the PR or commit message. A hook soft-asks before editing catalyst/ files.
 
