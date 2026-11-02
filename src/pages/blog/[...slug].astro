@@ -1,5 +1,5 @@
 ---
-import { getCollection } from "astro:content";
+import { getCollection, render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -7,13 +7,13 @@ import Footer from "../../components/Footer";
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
   return posts.map((post) => ({
-    params: { slug: post.slug },
+    params: { slug: post.id },
     props: { post },
   }));
 }
 
 const { post } = Astro.props;
-const { Content } = await post.render();
+const { Content } = await render(post);
 
 function formatDate(date: Date) {
   return new Date(date).toLocaleDateString("en-US", {
@@ -111,7 +111,7 @@ const blogPostSchema = {
           </div>
           <div class="flex gap-x-4">
             <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.data.title)}&url=${encodeURIComponent(`https://cscs.dev/blog/${post.slug}`)}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.data.title)}&url=${encodeURIComponent(`https://cscs.dev/blog/${post.id}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"

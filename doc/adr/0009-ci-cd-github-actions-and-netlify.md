@@ -39,3 +39,8 @@ Netlify watches the same repository and deploys independently when it detects a 
 ## Amendment (2026-11-01, #80)
 
 - [ADR 0012](0012-branch-protection-via-repository-ruleset.md) protects `main` with a ruleset: changes land only through squash-merged pull requests whose `build` and Netlify `deploy-preview` checks passed. This narrows the known gap above rather than closing it: a change can still deploy without a passing CI run on its final merged state, through an admin bypass or because the checks are not strict.
+
+## Amendment (2026-11-02, #81)
+
+- `engines.node` now requires `>=22.23.4`, the floor set by astro 7.4.2 and `@astrojs/react` 7.1.1 (jsdom 30 needs `^22.22.2`). This supersedes the `>=22.12` floor in the #79 amendment.
+- `.nvmrc`, the `Containerfile` base image and `netlify.toml` still state only the major version (22), so they track the latest 22.x. The CI pin check compares only the major. A local Node, a cached image or a Netlify build image older than 22.23.4 passes that check and then fails when `astro` starts.
