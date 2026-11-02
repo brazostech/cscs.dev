@@ -13,6 +13,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -88,7 +89,23 @@ export async function ensurePocketBase() {
   try {
     const verifiedZip = join(work, asset);
     writeFileSync(verifiedZip, zip);
-    execFileSync("unzip", ["-o", "-q", verifiedZip, "pocketbase", "-d", work]);
+    try {
+      execFileSync("unzip", [
+        "-o",
+        "-q",
+        verifiedZip,
+        "pocketbase",
+        "-d",
+        work,
+      ]);
+    } catch (err) {
+      if (err?.code === "ENOENT") {
+        throw new Error(
+          "unzip is required to unpack PocketBase (brew install unzip / apt install unzip)",
+        );
+      }
+      throw err;
+    }
     chmodSync(join(work, "pocketbase"), 0o755);
     renameSync(join(work, "pocketbase"), binPath);
   } finally {
@@ -149,18 +166,32 @@ function installedVersion(path) {
       stdio: ["ignore", "pipe", "ignore"],
       timeout: 10_000,
     });
-    return /\bversion (\S+)/.exec(out)?.[1] ?? null;
+    return parsePocketBaseVersion(out);
   } catch {
     return null;
   }
 }
 
+/** Extracts the version from `pocketbase --version` output, or null. */
+export function parsePocketBaseVersion(output) {
+  return /\bversion (\S+)/.exec(output)?.[1] ?? null;
+}
+
+// CLI entry point (`make pocketbase`). Compares real paths so a symlinked
+// invocation still runs, and takes no arguments: it always installs at
+// backend/pocketbase.
 if (
   process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  realpathSync(resolve(process.argv[1])) ===
+    realpathSync(fileURLToPath(import.meta.url))
 ) {
   try {
-    const { path, installed } = await installPocketBase(process.argv[2]);
+    if (process.argv.length > 2) {
+      throw new Error(
+        `Unexpected arguments: ${process.argv.slice(2).join(" ")}. Usage: node backend/scripts/pocketbase-download.mjs`,
+      );
+    }
+    const { path, installed } = await installPocketBase();
     console.log(
       installed
         ? `Installed PocketBase ${PB_VERSION} at ${path}`

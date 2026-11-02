@@ -17,7 +17,7 @@ help: ## Show this help message
 
 .PHONY: pocketbase
 pocketbase: ## Install the pinned PocketBase for this OS/arch at ./pocketbase (checksum-verified, idempotent)
-	@node scripts/pocketbase-download.mjs $(CURDIR)/pocketbase
+	@node scripts/pocketbase-download.mjs
 
 .PHONY: build
 build: ## Build multi-arch image (local cache only)

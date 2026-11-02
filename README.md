@@ -47,7 +47,7 @@ Pick one of the two options below and leave it running while you develop.
 
 **Option A — a local binary (macOS or Linux, x64 or arm64)**
 
-The repo does not commit a PocketBase binary. `make pocketbase` installs the pinned version (0.34.0, the same one the container image uses) for your OS and architecture at `backend/pocketbase`, which is gitignored. It needs Node (step 1) and network access the first time. The download is SHA-256 checked before anything runs, and re-running the target does nothing once the right version is in place. On Windows, use Option B.
+The repo does not commit a PocketBase binary. `make pocketbase` installs the pinned version (0.34.0, the same one the container image uses) for your OS and architecture at `backend/pocketbase`, which is gitignored. It needs Node (step 1) and network access the first time. The download is SHA-256 checked before anything runs (an existing `backend/pocketbase` is kept if it reports the pinned version, and is not re-hashed). Re-running the target does nothing once the right version is in place; delete `backend/pocketbase` to force a reinstall. If you cloned before this change, the old committed binary is removed when you pull: run `make pocketbase` again. On Windows, use Option B.
 
 ```bash
 cd backend
@@ -135,7 +135,7 @@ PocketBase prints the host as `0.0.0.0`, which a browser cannot use. Replace it 
 http://0.0.0.0:8080/_/#/pbinstal/...   ->   http://localhost:8080/_/#/pbinstal/...
 ```
 
-Open the `localhost` link and create the superuser. If the link expired or you cannot retrieve it, create the account inside the running container — this runs the container's Linux binary, not the macOS binary on the host:
+Open the `localhost` link and create the superuser. If the link expired or you cannot retrieve it, create the account inside the running container — this runs the container's Linux binary, not the binary on the host:
 
 ```bash
 podman exec -it pocketbase pocketbase superuser create you@example.com 'a-long-password' --dir=/pb_data

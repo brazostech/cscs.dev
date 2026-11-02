@@ -4,7 +4,7 @@ PocketBase backend for the CSCS community website.
 
 ## Local Development
 
-PocketBase listens on port 8080. From the project root, install the pinned PocketBase for your OS and architecture (macOS or Linux, x64 or arm64; needs Node and `unzip`) and run it. `make pocketbase` verifies the download's SHA-256, writes the gitignored `backend/pocketbase`, and does nothing if that version is already there:
+PocketBase listens on port 8080. From the project root, install the pinned PocketBase for your OS and architecture (macOS or Linux, x64 or arm64; needs Node and `unzip`) and run it. `make pocketbase` verifies each download's SHA-256, writes the gitignored `backend/pocketbase`, and does nothing if that version is already there (an existing binary is kept if it reports the pinned version and is not re-hashed; delete it to force a reinstall). After pulling the change that stopped committing the binary, run `make pocketbase` again:
 
 ```bash
 cd backend

@@ -21,9 +21,9 @@ npm run format:check # Prettier (check only, what CI runs)
 npm run check        # astro check (typecheck)
 npm run test:run     # Vitest (single run)
 npm run test:pb      # PocketBase API rule tests (downloads PocketBase v0.34.0)
-(cd backend && make pocketbase) # Install the pinned PocketBase at backend/pocketbase (gitignored, not committed)
 npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
+make -C backend pocketbase # Install the pinned PocketBase at backend/pocketbase (gitignored, not committed)
 ```
 
 Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfile` base image and `netlify.toml` `NODE_VERSION` must match it, and CI fails if they don't.

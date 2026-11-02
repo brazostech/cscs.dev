@@ -72,6 +72,18 @@ jobs:
       - name: Run PocketBase API rule tests
         run: npm run test:pb
 
+      - name: Install PocketBase with make
+        run: |
+          out="$(make --no-print-directory -C backend pocketbase)"
+          echo "$out"
+          case "$out" in Installed*) ;; *) echo "first run should install"; exit 1;; esac
+          out="$(make --no-print-directory -C backend pocketbase)"
+          echo "$out"
+          case "$out" in *"already installed"*) ;; *) echo "second run should be a no-op"; exit 1;; esac
+          pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
+          [ "$(backend/pocketbase --version)" = "pocketbase version ${pb}" ] \
+            || { echo "backend/pocketbase does not report ${pb}"; exit 1; }
+
       - name: Run build
         run: npm run build
 
