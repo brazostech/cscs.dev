@@ -119,7 +119,7 @@ Migration files in `backend/pb_migrations/` with timestamp prefixes:
 
 ### Blog Posts
 
-Markdown in `src/content/blog/` with required frontmatter: `title`, `description`, `pubDate`, `author`, `tags`.
+Markdown in `src/content/blog/` with required frontmatter: `title`, `description`, `pubDate`, `author`. `tags` is optional and defaults to `[]`.
 
 ### Date Handling
 

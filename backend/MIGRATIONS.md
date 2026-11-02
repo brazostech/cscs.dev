@@ -12,17 +12,20 @@ PocketBase migrations allow you to version control your database schema and sync
 
 The easiest way to create migrations is using the Admin Dashboard with automigrate enabled:
 
-```bash
-# From the project root, start just PocketBase in a container:
-podman-compose up --build -d pocketbase
+Choose one of these, from the project root:
 
-# Or, on macOS arm64, run the committed binary from backend/:
+```bash
+# Option A — Podman
+podman-compose up --build -d pocketbase
+```
+
+```bash
+# Option B — committed binary (macOS arm64 only)
 cd backend
 ./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
-
-# Then open the Admin Dashboard
-# http://localhost:8080/_/
 ```
+
+Then open the Admin Dashboard at http://localhost:8080/\_/.
 
 **Steps:**
 
@@ -38,7 +41,7 @@ cd backend
 - Visual interface for schema design
 - Automatic migration generation
 - No syntax errors
-- TypeScript definitions updated automatically
+- PocketBase refreshes its JSVM and editor definitions at `backend/pb_data/types.d.ts` (not the frontend record types)
 
 ### 2. Manual Migration Creation (Advanced)
 
@@ -82,7 +85,7 @@ Migrations apply automatically on `pocketbase serve` startup, but you can manual
 Backend deployment is manual — there is no CI/CD deploy step (see [ADR 0010](../doc/adr/0010-backend-deployment-via-manual-script.md)). What does happen automatically:
 
 1. **Image contents**: Migrations in `backend/pb_migrations/` are copied into the container image by the `Containerfile`
-2. **Volume persistence**: The `pb_data` volume on the GCE persistent disk holds the database and the applied-migration history
+2. **Directory persistence**: The `pb_data` directory on the GCE persistent disk holds the database and the applied-migration history
 3. **On startup**: When the container starts, PocketBase applies pending migrations
 4. **Backups**: The GCE block storage runs scheduled snapshots
 
@@ -173,6 +176,7 @@ Fields:
 - time (text)
 - series_id (text — groups recurring events)
 - book (relation → books, single, optional)
+- created, updated (autodate)
 ```
 
 The original unique index on `title` was removed in `1768098549_updated_events_recurring.js` so recurring events can share a name.
@@ -236,6 +240,8 @@ These are the rules in the migrations:
 3. Commit to git
 
 ### Testing locally before production
+
+From the project root:
 
 ```bash
 # 1. Backup your local database

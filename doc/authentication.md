@@ -205,14 +205,9 @@ Email verification requires SMTP configuration:
 
 ### Development
 
-Email verification is configured in development with SendGrid SMTP. To test:
+SendGrid SMTP is configured in production only. Local development has no SMTP, so no verification email is sent and new accounts stay unverified. That does not block sign-in or moderator actions.
 
-1. Set **App URL** in Admin Dashboard: http://localhost:8080 (or http://localhost:4321)
-2. Register with a real email address
-3. Check your email for the verification link
-4. Click the link to verify
-
-Alternatively, you can manually verify users via Admin Dashboard (Collections → users → Edit user → check "verified")
+To test the production flow, use the production settings and a real email address. To unblock a local user instead, verify them manually in the Admin Dashboard (Collections → users → Edit user → check "verified").
 
 ## Troubleshooting
 

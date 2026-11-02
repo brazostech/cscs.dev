@@ -21,6 +21,13 @@ The frontend is a static Astro site. [PocketBase](https://pocketbase.io/) is the
 
 ## Local development
 
+### Prerequisites
+
+- **Node 22.23.4 or newer** via [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm), for running the site on the host.
+- **Podman and `podman-compose`** for the container paths. Option A and the full host-based flow do not need them.
+
+The full-compose variant below runs both services in containers: it skips steps 1 and 4 and does not need Node on the host.
+
 ### 1. Install Node and dependencies
 
 Use Node 22. The repo pins the major version in `.nvmrc` and `package.json` requires `>=22.23.4`:
@@ -56,7 +63,7 @@ From the project root, start just PocketBase:
 podman-compose up --build -d pocketbase
 ```
 
-Or start the whole stack in containers — PocketBase plus the Astro dev server on `:4321`. With this variant you do not need Node on the host and you can skip step 4:
+Or start the whole stack in containers — PocketBase plus the Astro dev server on `:4321`. With this variant you skip steps 1 and 4 and do not need Node on the host:
 
 ```bash
 podman-compose up --build -d
@@ -80,9 +87,11 @@ cp .env.example .env
 
 Leave `PUBLIC_POCKETBASE_URL` empty to keep the defaults. `PUBLIC_` variables are compiled into the client bundle, so the browser must be able to reach the URL you set. Never point local development at the production API.
 
+If you already have a `.env` from an older checkout, update or delete it: earlier examples used `http://pocketbase:8080`, which only resolves inside the Compose network, not in your browser.
+
 ### 4. Start the site
 
-In a second terminal:
+From the project root — run `cd ..` first if step 2 left you in `backend/` — in a second terminal:
 
 ```bash
 npm run dev
@@ -91,6 +100,8 @@ npm run dev
 **Check:** <http://localhost:4321> serves the home page, and <http://localhost:4321/schedule> loads events from PocketBase.
 
 ### 5. Create the PocketBase superuser
+
+**Option A — committed binary**
 
 With a fresh `backend/pb_data/`, PocketBase prints a one-time install link in the terminal where the server is running:
 
@@ -108,7 +119,27 @@ cd backend
 ./pocketbase superuser create you@example.com 'a-long-password' --dir=./pb_data
 ```
 
-Afterwards, <http://localhost:8080/_/> is the dashboard login.
+**Option B — Podman**
+
+The container runs detached, so the install link is in its logs rather than your terminal. Extract it:
+
+```bash
+podman-compose logs pocketbase | grep -o 'http://0.0.0.0:8080/_/#/pbinstal/[^ ]*'
+```
+
+PocketBase prints the host as `0.0.0.0`, which a browser cannot use. Replace it with `localhost`:
+
+```
+http://0.0.0.0:8080/_/#/pbinstal/...   ->   http://localhost:8080/_/#/pbinstal/...
+```
+
+Open the `localhost` link and create the superuser. If the link expired or you cannot retrieve it, create the account inside the running container — this runs the container's Linux binary, not the macOS binary on the host:
+
+```bash
+podman exec -it pocketbase pocketbase superuser create you@example.com 'a-long-password' --dir=/pb_data
+```
+
+Afterwards, <http://localhost:8080/_/> is the dashboard login for both options.
 
 ### 6. Register a site user and promote them to moderator
 
@@ -116,6 +147,8 @@ Afterwards, <http://localhost:8080/_/> is the dashboard login.
 2. Local PocketBase has no SMTP configured, so the verification email never arrives. That is expected: email verification is not required for local development, including moderator actions.
 3. In the dashboard at <http://localhost:8080/_/>, open **Collections → users**, click the new record, set **role** to `moderator`, and save.
 4. On the site, sign out and sign back in at <http://localhost:4321/login>. The browser caches the role from sign-in, so the old session still says `user`.
+
+The `/app/dashboard` page shows an **Email Verification Required** banner because no local SMTP is configured. That is expected; `/app/events` and moderator actions still work.
 
 **Check:** <http://localhost:4321/account> shows a **Moderator** badge next to "Account Dashboard", and <http://localhost:4321/app/events> shows the **Create Event** button. You now have the full local setup.
 
@@ -151,9 +184,13 @@ CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile`
 
 ## Project structure
 
+The main tracked files and directories:
+
 ```
 .
+├── .claude/                       # Claude Code hooks, settings and docs
 ├── .github/
+│   ├── dependabot.yml             # weekly dependency updates
 │   └── workflows/
 │       └── ci.yml                 # lint, format, typecheck, test, build, Storybook
 ├── .storybook/                    # Storybook config (main.ts, preview.ts)
@@ -174,10 +211,13 @@ CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile`
 │   ├── improvements.md
 │   └── seo.md
 ├── public/                        # static assets (favicon, robots.txt)
+├── scripts/
+│   └── create-audit-issues.sh
 ├── src/
 │   ├── assets/
 │   ├── components/
 │   │   ├── catalyst/              # vendored Catalyst UI Kit components
+│   │   ├── Welcome.astro          # Astro welcome component
 │   │   └── *.tsx                  # app components, tests and stories
 │   ├── content/
 │   │   └── blog/                  # Markdown blog posts
@@ -198,13 +238,18 @@ CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile`
 │   │   ├── mocks/                 # PocketBase mock and factories
 │   │   └── setup.ts
 │   └── content.config.ts          # blog collection schema
-├── AGENTS.md                      # conventions for AI agents (CLAUDE.md is a symlink)
 ├── .env.example
 ├── .nvmrc
+├── .prettierrc.mjs
+├── AGENTS.md                      # conventions for AI agents (CLAUDE.md is a symlink)
+├── Containerfile                  # development container for the full Compose stack
 ├── astro.config.mjs
+├── eslint.config.js
 ├── netlify.toml
 ├── package.json
+├── package-lock.json
 ├── podman-compose.yaml
+├── tsconfig.json
 └── vitest.config.ts
 ```
 
@@ -238,6 +283,8 @@ Edit a file inside `src/components/catalyst/` directly only when a wrapper canno
 | [doc/audit.md](doc/audit.md)                   | February 2026 project audit (historical)                           |
 | [doc/improvements.md](doc/improvements.md)     | Improvement plan (historical roadmap)                              |
 | [doc/seo.md](doc/seo.md)                       | SEO implementation notes                                           |
+
+Some older backend documents predate PocketBase 0.34. `RBAC_SETUP.md` still shows the removed `pocketbase admin` CLI and `pb.authStore.model`; the migrations in `backend/pb_migrations/` are authoritative for collections and API rules, and #84 updates that document.
 
 ## Contributing
 

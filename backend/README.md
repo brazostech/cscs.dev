@@ -4,7 +4,7 @@ PocketBase backend for the CSCS community website.
 
 ## Local Development
 
-PocketBase listens on port 8080. Run the committed binary from this directory (macOS arm64 only):
+PocketBase listens on port 8080. From the project root, run the committed binary (macOS arm64 only):
 
 ```bash
 cd backend
@@ -26,14 +26,14 @@ See the root `README.md` for the full local setup, including the superuser and m
 
 ## Collections
 
-| Collection | Purpose                                     | Public Read   | Write Access                   |
-| ---------- | ------------------------------------------- | ------------- | ------------------------------ |
-| `users`    | Authentication (email/password)             | No            | Self-registration, self-update |
-| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                |
-| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Self only                      |
-| `books`    | Book club reading list                      | Yes           | Moderators only                |
+| Collection | Purpose                                     | Public Read   | Write Access                      |
+| ---------- | ------------------------------------------- | ------------- | --------------------------------- |
+| `users`    | Authentication (email/password)             | No            | Self-registration, self-update    |
+| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                   |
+| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Authenticated create; self delete |
+| `books`    | Book club reading list                      | Yes           | Moderators only                   |
 
-Roles: `user` (default), `moderator` (set via admin dashboard). See `doc/authentication.md` for details.
+Roles: `user` (default), `moderator` (set via admin dashboard). See [`../doc/authentication.md`](../doc/authentication.md) for details. RSVP create currently accepts any authenticated user; #84 tightens it to the authenticated record.
 
 ## Migrations
 
