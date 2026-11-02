@@ -67,6 +67,8 @@ migrate(
 
 ### 3. Testing Migrations
 
+`npm run test:pb` (from the project root) downloads the pinned PocketBase release, verifies its SHA-256, starts it on a free local port with a temporary data directory and `backend/pb_migrations`, and runs the RSVP rule tests (`backend/test/`). It never contacts api.cscs.dev, and CI runs it. Add a case there when you change an API rule.
+
 Migrations apply automatically on `pocketbase serve` startup, but you can manually control them:
 
 ```bash
@@ -98,6 +100,19 @@ Local change → commit and PR → merge to main → (backend/) make build-push
 ```
 
 The build, push and restart commands are in [backend/README.md](README.md#deployment).
+
+### Rolling back a migration in production
+
+An image rollback does not undo a migration (see [RUNBOOK.md](RUNBOOK.md#roll-back-an-image)), and the new image still contains the migration file, so a plain restart would apply it again. To undo one on the live database, run its `down` and then move to the previous image:
+
+```bash
+gcloud compute ssh cscs-dev-backend --zone=us-central1-a --project=cscsdotdev
+# On the VM. This prompts "Do you really want to revert ...? (y/N)": answer y.
+sudo podman exec -it pocketbase-pocketbase pocketbase migrate down 1 \
+  --dir=/data/pb_data --migrationsDir=/pb_migrations
+```
+
+Then pin the previous image by digest and restart the service, following [Roll back an image](RUNBOOK.md#roll-back-an-image). The same `migrate down 1` command reverts only the most recently applied migration. Take a snapshot first if the migration touched data.
 
 ## Best Practices
 
@@ -210,13 +225,28 @@ These are the rules in the migrations:
 - Update: `@request.auth.id != "" && @request.auth.role = "moderator"`
 - Delete: `@request.auth.id != "" && @request.auth.role = "moderator"`
 
+**Books** (`1774800965_created_books.js`):
+
+- List: `""` (public)
+- View: `""` (public)
+- Create: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Update: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Delete: `@request.auth.id != "" && @request.auth.role = "moderator"`
+
 **RSVPs:**
 
 - List: `@request.auth.id != ""` (authenticated users can list)
 - View: `@request.auth.id != ""` (authenticated users can view)
-- Create: `@request.auth.id != ""` (authenticated users can create; the client sends its own user id)
-- Update: unset (no one can update an RSVP)
+- Create: `@request.auth.id != "" && @request.body.user = @request.auth.id` (a user can only create an RSVP for themselves; `1793620800_updated_rsvps_create_rule.js`)
+- Update: unset (`null`, superuser only; no user can update an RSVP)
 - Delete: `user = @request.auth.id` (users can only delete their own RSVPs)
+
+**Users** (`1764528168_updated_users.js`):
+
+- Create: `@request.body.email:isset = true && @request.body.password:isset = true && (@request.body.role:isset = false || @request.body.role = 'user')`
+- Update: `id = @request.auth.id && (@request.body.role:isset = false || @request.body.role = role)`
+
+See [RBAC_SETUP.md](RBAC_SETUP.md) for the reasoning behind each rule.
 
 ## Troubleshooting
 

@@ -26,14 +26,14 @@ See the root `README.md` for the full local setup, including the superuser and m
 
 ## Collections
 
-| Collection | Purpose                                     | Public Read   | Write Access                      |
-| ---------- | ------------------------------------------- | ------------- | --------------------------------- |
-| `users`    | Authentication (email/password)             | No            | Self-registration, self-update    |
-| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                   |
-| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Authenticated create; self delete |
-| `books`    | Book club reading list                      | Yes           | Moderators only                   |
+| Collection | Purpose                                     | Public Read   | Write Access                   |
+| ---------- | ------------------------------------------- | ------------- | ------------------------------ |
+| `users`    | Authentication (email/password)             | No            | Self-registration, self-update |
+| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                |
+| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Own-record create; self delete |
+| `books`    | Book club reading list                      | Yes           | Moderators only                |
 
-Roles: `user` (default), `moderator` (set via admin dashboard). See [`../doc/authentication.md`](../doc/authentication.md) for details. RSVP create currently accepts any authenticated user; #84 tightens it to the authenticated record.
+Roles: `user` (default), `moderator` (set via admin dashboard). See [`../doc/authentication.md`](../doc/authentication.md) for details. RSVP create is limited to the signed-in user's own record (`user` must equal the authenticated id).
 
 ## Migrations
 
@@ -43,7 +43,7 @@ Migration files live in `backend/pb_migrations/` with timestamp prefixes. Pocket
 
 **Updating a collection**: See `1768098549_updated_events_recurring.js` for the pattern (findCollectionByNameOrId + field mutations).
 
-Each migration has an up function and a down function for reversibility.
+Each migration has an up function and a down function for reversibility. `npm run test:pb` (from the project root) applies them to a throwaway local PocketBase and checks the API rules; see [MIGRATIONS.md](MIGRATIONS.md#3-testing-migrations).
 
 ## Deployment
 

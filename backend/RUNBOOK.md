@@ -293,7 +293,7 @@ The full image ID in the `ps` output must equal the ID from `inspect`, and the i
 
 Three limits:
 
-- **An image rollback does not roll back migrations.** PocketBase records applied migrations in the database. If the release added or changed a migration, the older image will report missing migrations and fail to start against the newer schema. In that case restore the data disk from a snapshot instead (see [Restore `pod-data` from a snapshot](#restore-pod-data-from-a-snapshot)).
+- **An image rollback does not roll back migrations.** PocketBase records applied migrations in the database. If the release added or changed a migration, the older image will report missing migrations and fail to start against the newer schema. In that case restore the data disk from a snapshot instead (see [Restore `pod-data` from a snapshot](#restore-pod-data-from-a-snapshot)). To undo just the latest migration through its `down`, see [Rolling back a migration in production](MIGRATIONS.md#rolling-back-a-migration-in-production).
 - **The pin does not survive a reboot.** `startup.sh` rewrites `pocketbase.yaml` with `image: ...:latest` on every boot, so any reboot (including the stop/start recovery above) silently undoes the pin and pulls the bad image again. Do not reboot while rolled back, and push a fixed image promptly. While the pin is in place, the `image:` line stays on the old digest until you change it back: when a fixed image is pushed, restore the `:latest` reference in `pocketbase.yaml` (or the next deploy will not take effect), reload, and restart.
 - **The old image must still be available.** A plain `podman system prune -f` after the deploy deletes it locally; the `pull` above fetches it from the registry, which keeps every pushed digest.
 

@@ -10,7 +10,8 @@ export default [
       ".astro/",
       "dist/",
       "node_modules/",
-      "backend/",
+      "backend/pb_data/",
+      "backend/pb_migrations/", // use PocketBase JSVM globals (migrate, Collection, ...)
       "catalyst-ui-kit/",
       "storybook-static/",
     ],
@@ -22,6 +23,25 @@ export default [
     files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    // Node scripts and tests under backend/test (not the PocketBase JSVM).
+    files: ["backend/test/**/*.mjs"],
+    languageOptions: {
+      globals: Object.fromEntries(
+        [
+          "AbortSignal",
+          "Buffer",
+          "FormData",
+          "URLSearchParams",
+          "clearTimeout",
+          "console",
+          "fetch",
+          "process",
+          "setTimeout",
+        ].map((name) => [name, "readonly"]),
+      ),
     },
   },
   ...storybook.configs["flat/recommended"],

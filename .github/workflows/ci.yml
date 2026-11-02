@@ -18,6 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -37,6 +38,16 @@ jobs:
           grep -qE "^[[:space:]]*NODE_VERSION[[:space:]]*=[[:space:]]*\"${node_major}\"[[:space:]]*$" netlify.toml \
             || { echo "netlify.toml NODE_VERSION does not match .nvmrc (${node_major})"; exit 1; }
 
+      - name: Check PocketBase pins match the Containerfile
+        run: |
+          pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
+          [ -n "$pb" ] \
+            || { echo "ARG POCKETBASE_VERSION not found in backend/Containerfile"; exit 1; }
+          grep -Fxq "export const PB_VERSION = \"${pb}\";" backend/test/pocketbase-harness.mjs \
+            || { echo "PB_VERSION in backend/test/pocketbase-harness.mjs does not match Containerfile (${pb})"; exit 1; }
+          grep -Eq "^[[:space:]]*POCKETBASE_VERSION:[[:space:]]*\"?${pb//./\\.}\"?[[:space:]]*$" podman-compose.yaml \
+            || { echo "POCKETBASE_VERSION in podman-compose.yaml does not match Containerfile (${pb})"; exit 1; }
+
       - name: Install dependencies
         run: npm ci
 
@@ -51,6 +62,15 @@ jobs:
 
       - name: Run tests
         run: npm run test:run
+
+      - name: Cache PocketBase download
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/pocketbase
+          key: pocketbase-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/test/pocketbase-harness.mjs') }}
+
+      - name: Run PocketBase API rule tests
+        run: npm run test:pb
 
       - name: Run build
         run: npm run build
