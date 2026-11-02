@@ -51,6 +51,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 ### React
 
 - Function components with hooks only
+- New interactive pages are React components, not `innerHTML` scripts. A page in `src/pages/` renders the component (`client:only="react"` for auth-dependent pages) and holds no `<script>` that builds markup, registers `window` handlers or polls for its container. Fields rendered through React are escaped; `innerHTML` strings are not.
 - Hydration directives: `client:only="react"` for auth-dependent, `client:load` for interactive, `client:visible` for lazy, none for static
 - All components must support dark mode (`dark:` variants, `zinc` neutrals + `indigo` accent)
 
@@ -83,6 +84,7 @@ src/
 ### PocketBase Integration
 
 - Client: `src/lib/pocketbase.ts` exports `pb` instance + typed helper functions
+- Record types: `src/lib/types.ts` (`EventRecord`, `RsvpRecord`, `BookRecord`, `UserRecord`) mirror `backend/pb_migrations`. Use them as generics, `pb.collection<EventRecord>("events")`, and update them in the same commit as a migration.
 - Collections: `users` (auth), `events`, `rsvps`, `books`
 - Auth: `useAuth()` hook for React components, `user?.role === "moderator"` for admin checks
 - RBAC: Public list/view, moderator-only create/update/delete (enforced via API rules)
