@@ -227,6 +227,21 @@ describe("AppDashboard", () => {
       expect(mockRequestVerification).toHaveBeenCalledTimes(1);
     });
 
+    it("starts afresh for a different account instead of keeping the last one's sent state", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<AppDashboard />);
+      await user.click(screen.getByRole("button", { name: RESEND_LABEL }));
+      await screen.findByRole("status");
+
+      mockUseAuth.mockReturnValue({
+        user: createMockUser({ verified: false, email: "other@example.com" }),
+      });
+      rerender(<AppDashboard />);
+
+      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.getByRole("button", { name: RESEND_LABEL })).toBeEnabled();
+    });
+
     it("ignores a second click that lands before React re-renders", async () => {
       mockRequestVerification.mockReturnValue(new Promise(() => {}));
       render(<AppDashboard />);

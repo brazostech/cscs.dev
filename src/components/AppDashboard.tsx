@@ -120,7 +120,12 @@ export default function AppDashboard() {
 
   return (
     <div className="space-y-8">
-      {user.verified ? <VerifiedBanner /> : <UnverifiedBanner user={user} />}
+      {user.verified ? (
+        <VerifiedBanner />
+      ) : (
+        // Keyed by user, so a different account never inherits a "sent" state.
+        <UnverifiedBanner key={user.id} user={user} />
+      )}
       <div>
         <Subheading className="mb-4">My Upcoming Events</Subheading>
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
