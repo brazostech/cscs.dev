@@ -1,17 +1,6 @@
 import { useState, useEffect } from "react";
 import { pb, getEventRsvpCounts } from "../lib/pocketbase";
-
-interface Event {
-  id: string;
-  title: string;
-  type: string;
-  date: string;
-  time: string;
-  time_zone: string;
-  location: string;
-  location_details?: string;
-  description?: string;
-}
+import type { EventRecord } from "../lib/types";
 
 // Format date for display
 function formatDate(dateString: string): string {
@@ -56,7 +45,7 @@ function getTypeName(type: string): string {
 }
 
 export default function ScheduleEvents() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventRecord[]>([]);
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +54,11 @@ export default function ScheduleEvents() {
     async function fetchEvents() {
       try {
         // Fetch all events, sorted by date
-        const allEvents = await pb.collection("events").getFullList<Event>({
-          sort: "date",
-        });
+        const allEvents = await pb
+          .collection<EventRecord>("events")
+          .getFullList({
+            sort: "date",
+          });
 
         // Filter to only show future events
         const today = new Date();
