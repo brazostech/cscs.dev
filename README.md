@@ -165,22 +165,24 @@ The `/app/dashboard` page shows an **Email Verification Required** banner becaus
 | `npm run check`           | `astro check` typecheck                              |
 | `npm test`                | Vitest in watch mode                                 |
 | `npm run test:run`        | Vitest once (what CI runs)                           |
+| `npm run test:pb`         | PocketBase API rule tests (what CI runs)             |
 | `npm run test:coverage`   | Vitest once with v8 coverage                         |
 | `npm run storybook`       | Storybook at `localhost:6006`                        |
 | `npm run build-storybook` | Static Storybook build                               |
 
-Before opening a pull request, run the same six checks CI runs:
+Before opening a pull request, run the same checks CI runs:
 
 ```bash
 npm run lint
 npm run format:check
 npm run check
 npm run test:run
+npm run test:pb
 npm run build
 npm run build-storybook
 ```
 
-CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile` base image and `netlify.toml`'s `NODE_VERSION` agree on the Node major version. If you bump Node, change all three. `main` only accepts pull requests whose `build` job and Netlify `deploy-preview` check pass (ADR [0012](doc/adr/0012-branch-protection-via-repository-ruleset.md)).
+`npm run test:pb` downloads PocketBase v0.34.0 from GitHub releases (SHA-256 checked, cached under `node_modules/.cache/pocketbase`), so it needs network access the first time and `unzip`. CI (`.github/workflows/ci.yml`) also verifies that `.nvmrc`, the `Containerfile` base image and `netlify.toml`'s `NODE_VERSION` agree on the Node major version, and that the PocketBase version agrees across the `Containerfile`, `podman-compose.yaml` and `backend/test/pocketbase-harness.mjs`. If you bump Node, change all three; if you bump PocketBase, change all three and the checksums in the harness. `main` only accepts pull requests whose `build` job and Netlify `deploy-preview` check pass (ADR [0012](doc/adr/0012-branch-protection-via-repository-ruleset.md)).
 
 ## Project structure
 
@@ -192,10 +194,11 @@ The main tracked files and directories:
 ├── .github/
 │   ├── dependabot.yml             # weekly dependency updates
 │   └── workflows/
-│       └── ci.yml                 # lint, format, typecheck, test, build, Storybook
+│       └── ci.yml                 # lint, format, typecheck, test, PocketBase rule tests, build, Storybook
 ├── .storybook/                    # Storybook config (main.ts, preview.ts)
 ├── backend/
-│   ├── pb_migrations/             # PocketBase schema migrations (10 files)
+│   ├── pb_migrations/             # PocketBase schema migrations (11 files)
+│   ├── test/                      # PocketBase API rule tests (npm run test:pb)
 │   ├── pocketbase                 # PocketBase 0.34.0 binary, macOS arm64
 │   ├── Containerfile              # backend container image
 │   ├── Makefile                   # image build/push targets

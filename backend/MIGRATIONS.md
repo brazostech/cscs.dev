@@ -101,6 +101,19 @@ Local change → commit and PR → merge to main → (backend/) make build-push
 
 The build, push and restart commands are in [backend/README.md](README.md#deployment).
 
+### Rolling back a migration in production
+
+An image rollback does not undo a migration (see [RUNBOOK.md](RUNBOOK.md#roll-back-an-image)), and the new image still contains the migration file, so a plain restart would apply it again. To undo one on the live database, run its `down` and then move to the previous image:
+
+```bash
+gcloud compute ssh cscs-dev-backend --zone=us-central1-a --project=cscsdotdev
+# On the VM. This prompts "Do you really want to revert ...? (y/N)": answer y.
+sudo podman exec -it pocketbase-pocketbase pocketbase migrate down 1 \
+  --dir=/data/pb_data --migrationsDir=/pb_migrations
+```
+
+Then pin the previous image by digest and restart the service, following [Roll back an image](RUNBOOK.md#roll-back-an-image). The same `migrate down 1` command reverts only the most recently applied migration. Take a snapshot first if the migration touched data.
+
 ## Best Practices
 
 ### DO:
@@ -205,6 +218,14 @@ There is no `status` field: the app treats the existence of an RSVP as "attendin
 These are the rules in the migrations:
 
 **Events:**
+
+- List: `""` (public)
+- View: `""` (public)
+- Create: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Update: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Delete: `@request.auth.id != "" && @request.auth.role = "moderator"`
+
+**Books** (`1774800965_created_books.js`):
 
 - List: `""` (public)
 - View: `""` (public)

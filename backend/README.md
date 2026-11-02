@@ -43,7 +43,7 @@ Migration files live in `backend/pb_migrations/` with timestamp prefixes. Pocket
 
 **Updating a collection**: See `1768098549_updated_events_recurring.js` for the pattern (findCollectionByNameOrId + field mutations).
 
-Each migration has an up function and a down function for reversibility.
+Each migration has an up function and a down function for reversibility. `npm run test:pb` (from the project root) applies them to a throwaway local PocketBase and checks the API rules; see [MIGRATIONS.md](MIGRATIONS.md#3-testing-migrations).
 
 ## Deployment
 

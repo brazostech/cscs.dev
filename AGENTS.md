@@ -117,6 +117,7 @@ Migration files in `backend/pb_migrations/` with timestamp prefixes:
 - New collection: see `1768138900_created_rsvps.js` pattern
 - Update collection: see `1768098549_updated_events_recurring.js` pattern
 - Each migration has up/down functions for reversibility
+- Changing an API rule: add a case to `backend/test/` and run `npm run test:pb`
 
 ### Blog Posts
 
@@ -132,7 +133,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
 - **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. `main` takes changes only through PRs (ruleset, ADR 0012).
 - **Merging**: squash only. The PR title becomes the commit subject on `main`, so it must be a Conventional Commit; the body becomes the commit message. Branches delete on merge.
-- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
+- **CI**: PRs run lint, format check, typecheck, tests, PocketBase API rule tests (`npm run test:pb`), build, Storybook build via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
 
 ## Boundaries
 
@@ -150,7 +151,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
 - **Feature roadmap**: `doc/improvements.md`
-- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, build, Storybook build)
+- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, PocketBase API rule tests, build, Storybook build)
 - **Hook & skill docs**: `.claude/README.md`
 
 ## Worktree Workflow

@@ -14,7 +14,7 @@ These are handled by two separate systems. GitHub Actions provides a configurabl
 
 We will use GitHub Actions for the CI validation pipeline and Netlify's native GitHub integration for deployment. These two systems operate independently.
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on every pull request targeting `main`. It executes seven steps: Node pin check, lint (ESLint), format check (Prettier `--check`), typecheck (`astro check`), tests (Vitest), Astro build, and Storybook build. See the 2026-11-01 amendment for #79 below.
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on every pull request targeting `main`. It executes these validation steps: Node pin check, lint (ESLint), format check (Prettier `--check`), typecheck (`astro check`), tests (Vitest), Astro build, and Storybook build. The amendments below add a pin check (#79) and, for #84, a PocketBase pin check and PocketBase API rule tests.
 
 Netlify watches the same repository and deploys independently when it detects a push to `main`, using its own auto-detected Astro build settings. Netlify is not triggered by or dependent on the GitHub Actions workflow.
 
@@ -44,3 +44,9 @@ Netlify watches the same repository and deploys independently when it detects a 
 
 - `engines.node` now requires `>=22.23.4`, the floor set by astro 7.4.2 and `@astrojs/react` 7.1.1 (jsdom 30 needs `^22.22.2`). This supersedes the `>=22.12` floor in the #79 amendment.
 - `.nvmrc`, the `Containerfile` base image and `netlify.toml` still state only the major version (22), so they track the latest 22.x. The CI pin check compares only the major. A local Node, a cached image or a Netlify build image older than 22.23.4 passes that check and then fails when `astro` starts.
+
+## Amendment (2026-11-02, #84)
+
+- Two steps were added: a PocketBase pin check (the version in `backend/Containerfile`, `podman-compose.yaml` and `backend/test/pocketbase-harness.mjs` must agree) and `npm run test:pb`, which runs the PocketBase API rule tests (`backend/test/`). A cache step for the downloaded PocketBase release (`actions/cache`) sits before the tests, and the job has `timeout-minutes: 15`.
+- `test:pb` downloads the pinned PocketBase release from `github.com/pocketbase/pocketbase/releases`, verifies its SHA-256 against checksums stored in the harness, and runs it on a random local port against a temporary data directory with this repo's migrations. It never contacts the production API, and it does not use the committed `backend/pocketbase` binary.
+- The required `build` check (ADR 0012) now depends on that download whenever the cache misses. If GitHub's release CDN is unavailable the download retries three times, then `build` fails. A checksum mismatch fails the job and is never retried. A failed run is re-run, or, as for any stuck check, covered by the admin bypass ADR 0012 reserves.
