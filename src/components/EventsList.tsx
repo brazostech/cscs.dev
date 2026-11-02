@@ -88,11 +88,11 @@ function EventRow({
   return (
     <tr
       role="row"
-      className="flex flex-wrap items-center gap-y-3 rounded-lg border border-zinc-200 bg-white p-4 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 dark:border-zinc-800 dark:bg-zinc-900 dark:lg:bg-transparent"
+      className="flex flex-wrap items-center gap-y-3 max-lg:rounded-lg max-lg:border max-lg:border-zinc-200 max-lg:bg-white max-lg:p-4 lg:table-row dark:max-lg:border-zinc-800 dark:max-lg:bg-zinc-900"
     >
       <td
         role="cell"
-        className="w-full lg:table-cell lg:w-auto lg:px-6 lg:py-4"
+        className="w-full wrap-anywhere lg:table-cell lg:w-auto lg:px-4 lg:py-4"
       >
         <div className="text-sm font-medium text-zinc-900 dark:text-white">
           {event.title}
@@ -103,7 +103,7 @@ function EventRow({
       </td>
       <td
         role="cell"
-        className="flex w-full items-start gap-2 lg:table-cell lg:w-auto lg:px-6 lg:py-4"
+        className="flex w-full items-start gap-2 lg:table-cell lg:w-auto lg:px-4 lg:py-4 lg:whitespace-nowrap"
       >
         <CalendarIcon
           aria-hidden="true"
@@ -120,7 +120,7 @@ function EventRow({
       </td>
       <td
         role="cell"
-        className="flex w-full items-start gap-2 lg:table-cell lg:w-auto lg:px-6 lg:py-4"
+        className="flex w-full items-start gap-2 wrap-anywhere lg:table-cell lg:w-auto lg:px-4 lg:py-4"
       >
         <MapPinIcon
           aria-hidden="true"
@@ -140,7 +140,7 @@ function EventRow({
       {/* Cards read "N attending"; the table column header says it already. */}
       <td
         role="cell"
-        className="flex items-center gap-1 text-xs text-zinc-500 lg:table-cell lg:px-6 lg:py-4 lg:text-center lg:text-sm dark:text-zinc-400"
+        className="flex items-center gap-1 text-xs text-zinc-500 lg:table-cell lg:px-4 lg:py-4 lg:text-center lg:text-sm dark:text-zinc-400"
       >
         <UsersIcon aria-hidden="true" className="h-4 w-4 lg:hidden" />
         <span>{count}</span>
@@ -148,9 +148,9 @@ function EventRow({
       </td>
       <td
         role="cell"
-        className="ml-auto flex flex-wrap items-center justify-end gap-2 lg:table-cell lg:px-6 lg:py-4 lg:text-right"
+        className="ml-auto flex flex-wrap items-center justify-end gap-2 lg:table-cell lg:px-4 lg:py-4 lg:text-right"
       >
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-nowrap">
           <BadgeButton
             color={isAttending ? "emerald" : "indigo"}
             disabled={isPending}
@@ -334,35 +334,35 @@ export default function EventsList() {
               <th
                 role="columnheader"
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+                className="px-4 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Event
               </th>
               <th
                 role="columnheader"
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+                className="px-4 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Date &amp; Time
               </th>
               <th
                 role="columnheader"
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+                className="px-4 py-3 text-left text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Location
               </th>
               <th
                 role="columnheader"
                 scope="col"
-                className="px-6 py-3 text-center text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
+                className="px-4 py-3 text-center text-xs font-medium tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
               >
                 Attending
               </th>
               <th
                 role="columnheader"
                 scope="col"
-                className="relative px-6 py-3"
+                className="relative px-4 py-3"
               >
                 <span className="sr-only">Actions</span>
               </th>
