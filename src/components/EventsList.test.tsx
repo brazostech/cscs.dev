@@ -10,10 +10,11 @@
  * - Logged-out redirect to the login page
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import EventsList from "./EventsList";
+import type { EventRecord } from "../lib/types";
 import {
   createMockEvent,
   createMockModerator,
@@ -86,7 +87,7 @@ describe("EventsList", () => {
 
       render(<EventsList />);
 
-      expect(screen.getByText("Loading events...")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading events...");
     });
 
     it("shows the empty state when there are no events", async () => {
@@ -509,6 +510,151 @@ describe("EventsList", () => {
       await waitFor(() => expect(screen.queryByText("Remove")).toBeNull());
       expect(screen.getByText("Keep")).toBeInTheDocument();
       expect(mockGetFullList).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores a slow earlier reload that resolves after a newer one", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const a = createMockEvent({ title: "Event A" });
+      const b = createMockEvent({ title: "Event B" });
+      const c = createMockEvent({ title: "Event C" });
+      let releaseA: (events: EventRecord[]) => void = () => {};
+      mockGetFullList
+        .mockResolvedValueOnce([a, b, c])
+        // Reload after deleting A: held, and it still lists B.
+        .mockReturnValueOnce(
+          new Promise<EventRecord[]>((resolve) => {
+            releaseA = resolve;
+          }),
+        )
+        // Reload after deleting B: arrives first.
+        .mockResolvedValueOnce([c]);
+
+      render(<EventsList />);
+      await screen.findByText("Event A");
+
+      await user.click(
+        within(rowFor("Event A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      await user.click(
+        within(rowFor("Event B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(screen.queryByText("Event B")).toBeNull());
+
+      // Resolve A's stale reload and let React flush it.
+      await act(async () => {
+        releaseA([b, c]);
+      });
+
+      expect(screen.queryByText("Event B")).toBeNull();
+      expect(screen.queryByText("Event A")).toBeNull();
+      expect(screen.getByText("Event C")).toBeInTheDocument();
+    });
+
+    it("ignores a slow earlier reload that fails after a newer one applied", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const a = createMockEvent({ title: "Event A" });
+      const b = createMockEvent({ title: "Event B" });
+      const c = createMockEvent({ title: "Event C" });
+      let rejectA: (err: Error) => void = () => {};
+      mockGetFullList
+        .mockResolvedValueOnce([a, b, c])
+        // Reload after deleting A: held, then it fails.
+        .mockReturnValueOnce(
+          new Promise<EventRecord[]>((_, reject) => {
+            rejectA = reject;
+          }),
+        )
+        // Reload after deleting B: arrives first.
+        .mockResolvedValueOnce([c]);
+
+      render(<EventsList />);
+      await screen.findByText("Event A");
+
+      await user.click(
+        within(rowFor("Event A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      await user.click(
+        within(rowFor("Event B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(3));
+
+      await act(async () => {
+        rejectA(new Error("stale boom"));
+      });
+
+      expect(screen.queryByText("Error loading events")).toBeNull();
+      expect(screen.queryByText("stale boom")).toBeNull();
+      expect(screen.getByText("Event C")).toBeInTheDocument();
+    });
+
+    it("ignores a slow earlier reload held in its RSVP fetch", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const a = createMockEvent({ title: "Event A" });
+      const b = createMockEvent({ title: "Event B" });
+      const c = createMockEvent({ title: "Event C" });
+      let releaseCounts: (counts: Record<string, number>) => void = () => {};
+      mockGetFullList
+        .mockResolvedValueOnce([a, b, c])
+        .mockResolvedValueOnce([b, c])
+        .mockResolvedValueOnce([c]);
+      mockGetEventRsvpCounts
+        .mockResolvedValueOnce({})
+        // A's reload gets its events at once, then stalls on the counts.
+        .mockReturnValueOnce(
+          new Promise<Record<string, number>>((resolve) => {
+            releaseCounts = resolve;
+          }),
+        )
+        .mockResolvedValue({});
+
+      render(<EventsList />);
+      await screen.findByText("Event A");
+
+      await user.click(
+        within(rowFor("Event A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() =>
+        expect(mockGetEventRsvpCounts).toHaveBeenCalledTimes(2),
+      );
+      await user.click(
+        within(rowFor("Event B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(3));
+
+      await act(async () => {
+        releaseCounts({});
+      });
+
+      expect(screen.queryByText("Event B")).toBeNull();
+      expect(screen.queryByText("Event A")).toBeNull();
+      expect(screen.getByText("Event C")).toBeInTheDocument();
+    });
+
+    it("removes a deleted event before its reload resolves", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const keep = createMockEvent({ title: "Keep" });
+      const remove = createMockEvent({ title: "Remove" });
+      mockGetFullList.mockResolvedValueOnce([keep, remove]).mockReturnValueOnce(
+        // The reload never resolves in this test.
+        new Promise(() => {}),
+      );
+
+      render(<EventsList />);
+      await screen.findByText("Remove");
+
+      await user.click(
+        within(rowFor("Remove")).getByRole("button", { name: /^Delete:/ }),
+      );
+
+      await waitFor(() => expect(mockGetFullList).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText("Remove")).toBeNull();
+      expect(screen.getByText("Keep")).toBeInTheDocument();
     });
 
     it("does not delete when the confirmation is declined", async () => {

@@ -6,42 +6,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { pb } from "../lib/pocketbase";
 import type { BookRecord } from "../lib/types";
+import { useLatestRequest } from "../lib/useLatestRequest";
 import { useAuth } from "../stores/authStore";
 import { Badge, BadgeButton } from "./catalyst/badge";
 import { Button } from "./catalyst/button";
-import { Heading, Subheading } from "./catalyst/heading";
+import { Heading } from "./catalyst/heading";
 import { Text } from "./catalyst/text";
-
-function errorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
-}
-
-function Spinner() {
-  return (
-    <div className="py-12 text-center">
-      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent dark:border-indigo-400"></div>
-      <Text className="mt-4">Loading books...</Text>
-    </div>
-  );
-}
-
-function Notice({
-  icon,
-  title,
-  message,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  message: string;
-}) {
-  return (
-    <div className="py-12 text-center">
-      {icon}
-      <Subheading level={3}>{title}</Subheading>
-      <Text className="mt-1">{message}</Text>
-    </div>
-  );
-}
+import { Notice, Spinner, errorMessage } from "./ListStates";
 
 /** Anything that is not "reading" reads as Completed, as the old page did. */
 function StatusBadge({ status }: { status: BookRecord["status"] }) {
@@ -115,18 +86,23 @@ export default function BooksList() {
   const [error, setError] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
+  const beginLoad = useLatestRequest();
+
   const loadBooks = useCallback(async () => {
+    const isLatest = beginLoad();
     try {
       const loaded = await pb
         .collection<BookRecord>("books")
         .getFullList({ sort: "status,-created" });
+      if (!isLatest()) return;
       setError(null);
       setBooks(loaded);
     } catch (err) {
+      if (!isLatest()) return;
       console.error("Error loading books:", err);
       setError(errorMessage(err, "Failed to load books"));
     }
-  }, []);
+  }, [beginLoad]);
 
   // Same gate as before the port: no signed-in user means the login page.
   useEffect(() => {
@@ -145,6 +121,8 @@ export default function BooksList() {
     setPendingIds((ids) => new Set(ids).add(book.id));
     try {
       await pb.collection<BookRecord>("books").delete(book.id);
+      // Drop it at once, so a stale reload can't leave a deleted book to click.
+      setBooks((current) => current?.filter((b) => b.id !== book.id) ?? null);
       await loadBooks();
     } catch (err) {
       console.error("Error deleting book:", err);
@@ -173,7 +151,7 @@ export default function BooksList() {
       />
     );
   } else if (books === null) {
-    content = <Spinner />;
+    content = <Spinner label="Loading books..." />;
   } else if (books.length === 0) {
     content = (
       <Notice
