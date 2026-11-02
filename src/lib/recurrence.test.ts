@@ -88,7 +88,7 @@ describe("generateRecurringDates", () => {
 
     it("keeps weekly dates on the same weekday when clocks fall back", () => {
       // US clocks fall back on 2026-11-01; adding 7 * 24h of milliseconds in
-      // local time would land on 2026-10-31 23:00 and give the wrong date.
+      // local time would land on 2026-11-07 23:00 and give the wrong date.
       const dates = generateRecurringDates("2026-10-25", "weekly", 4);
 
       expect(dates).toEqual([
