@@ -59,8 +59,8 @@ export async function logout() {
   pb.authStore.clear();
 }
 
-export function getCurrentUser(): AuthUser | null {
-  return pb.authStore.record as AuthUser | null;
+export function getCurrentUser(): UserRecord | null {
+  return pb.authStore.record as UserRecord | null;
 }
 
 export function isAuthenticated(): boolean {
@@ -68,7 +68,7 @@ export function isAuthenticated(): boolean {
 }
 
 // Listen to auth state changes
-export function onAuthChange(callback: (user: AuthUser | null) => void) {
+export function onAuthChange(callback: (user: UserRecord | null) => void) {
   pb.authStore.onChange(() => {
     callback(getCurrentUser());
   });
@@ -94,7 +94,7 @@ export type RsvpData = RsvpRecord;
 /**
  * RSVP to an event (creates attendance record)
  */
-export async function rsvpToEvent(eventId: string): Promise<RsvpData> {
+export async function rsvpToEvent(eventId: string): Promise<RsvpRecord> {
   const user = getCurrentUser();
   if (!user) throw new Error("Must be logged in to RSVP");
   return await pb.collection<RsvpRecord>("rsvps").create({
@@ -116,7 +116,7 @@ export async function cancelRsvp(rsvpId: string): Promise<void> {
  */
 export async function getUserEventRsvp(
   eventId: string,
-): Promise<RsvpData | null> {
+): Promise<RsvpRecord | null> {
   const user = getCurrentUser();
   if (!user) return null;
   try {
@@ -131,7 +131,7 @@ export async function getUserEventRsvp(
 /**
  * Get all RSVPs for current user (with event expansion)
  */
-export async function getUserRsvps(): Promise<RsvpData[]> {
+export async function getUserRsvps(): Promise<RsvpRecord[]> {
   const user = getCurrentUser();
   if (!user) return [];
   return await pb.collection<RsvpRecord>("rsvps").getFullList({
@@ -175,11 +175,11 @@ export async function getEventRsvpCounts(
 
 /**
  * Get current user's RSVPs for multiple events (batch operation)
- * Returns a map of eventId -> RsvpData
+ * Returns a map of eventId -> RsvpRecord
  */
 export async function getUserEventRsvps(
   eventIds: string[],
-): Promise<Record<string, RsvpData>> {
+): Promise<Record<string, RsvpRecord>> {
   const user = getCurrentUser();
   if (!user || eventIds.length === 0) return {};
 
@@ -189,7 +189,7 @@ export async function getUserEventRsvps(
     .collection<RsvpRecord>("rsvps")
     .getFullList({ filter });
 
-  const rsvpMap: Record<string, RsvpData> = {};
+  const rsvpMap: Record<string, RsvpRecord> = {};
   rsvps.forEach((rsvp) => {
     rsvpMap[rsvp.event] = rsvp;
   });
@@ -206,7 +206,7 @@ export type BookData = BookRecord;
 /**
  * Get the currently-reading book (expects 0 or 1 result).
  */
-export async function getCurrentBook(): Promise<BookData | null> {
+export async function getCurrentBook(): Promise<BookRecord | null> {
   try {
     return await pb
       .collection<BookRecord>("books")
@@ -219,7 +219,7 @@ export async function getCurrentBook(): Promise<BookData | null> {
 /**
  * Get all completed books, ordered by sort_order then end_date descending.
  */
-export async function getCompletedBooks(): Promise<BookData[]> {
+export async function getCompletedBooks(): Promise<BookRecord[]> {
   return await pb.collection<BookRecord>("books").getFullList({
     filter: 'status="completed"',
     sort: "sort_order,-end_date",
@@ -229,7 +229,7 @@ export async function getCompletedBooks(): Promise<BookData[]> {
 /**
  * Get all books (for admin management).
  */
-export async function getAllBooks(): Promise<BookData[]> {
+export async function getAllBooks(): Promise<BookRecord[]> {
   return await pb.collection<BookRecord>("books").getFullList({
     sort: "-created",
   });
@@ -238,7 +238,7 @@ export async function getAllBooks(): Promise<BookData[]> {
 /**
  * Get the cover image URL for a book.
  */
-export function getBookCoverUrl(book: BookData): string | null {
+export function getBookCoverUrl(book: BookRecord): string | null {
   if (!book.cover_image) return null;
   return pb.files.getURL(book, book.cover_image);
 }
