@@ -16,21 +16,27 @@ export function Spinner({ label }: { label: string }) {
   );
 }
 
-/** The empty and error states of a list page: an icon, a title and a message. */
+/**
+ * The empty and error states of a list page: an icon, a title and a message,
+ * then any `children` (such as a link) below them.
+ */
 export function Notice({
   icon,
   title,
   message,
+  children,
 }: {
   icon: React.ReactNode;
   title: string;
   message: string;
+  children?: React.ReactNode;
 }) {
   return (
     <div className="py-12 text-center">
       {icon}
       <Subheading level={3}>{title}</Subheading>
       <Text className="mt-1">{message}</Text>
+      {children}
     </div>
   );
 }
