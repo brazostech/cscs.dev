@@ -2,7 +2,9 @@
 // SHA-256 checksums live, and how to fetch and verify it. Used by the API rule
 // test harness (backend/test/pocketbase-harness.mjs) and by `make pocketbase`
 // (run from backend/), which installs the binary at backend/pocketbase.
-// Never executes bytes whose SHA-256 does not match the pinned checksum.
+// Downloaded bytes are only ever installed or run after their SHA-256 matches
+// the pinned checksum. A binary already at the install path is not re-hashed:
+// it is kept only if it runs and reports the pinned version.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -50,7 +52,7 @@ export async function ensurePocketBase() {
   const expected = CHECKSUMS[platform];
   if (!expected) {
     throw new Error(
-      `No pinned PocketBase checksum for ${platform}. Supported: ${Object.keys(CHECKSUMS).join(", ")}`,
+      `No pinned PocketBase checksum for ${platform}. Supported: ${Object.keys(CHECKSUMS).join(", ")}. Use the container instead (podman-compose up --build -d pocketbase).`,
     );
   }
   const asset = `pocketbase_${PB_VERSION}_${OS_NAMES[process.platform]}_${ARCH_NAMES[process.arch]}.zip`;

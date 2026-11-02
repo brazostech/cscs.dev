@@ -47,8 +47,8 @@ Netlify watches the same repository and deploys independently when it detects a 
 
 ## Amendment (2026-11-02, #84)
 
-- Two steps were added: a PocketBase pin check (the version in `backend/Containerfile`, `podman-compose.yaml` and `backend/test/pocketbase-harness.mjs` must agree) and `npm run test:pb`, which runs the PocketBase API rule tests (`backend/test/`). A cache step for the downloaded PocketBase release (`actions/cache`) sits before the tests, and the job has `timeout-minutes: 15`.
-- `test:pb` downloads the pinned PocketBase release from `github.com/pocketbase/pocketbase/releases`, verifies its SHA-256 against checksums stored in the harness, and runs it on a random local port against a temporary data directory with this repo's migrations. It never contacts the production API, and it does not use a local `backend/pocketbase` binary.
+- Two steps were added: a PocketBase pin check (the version in `backend/Containerfile`, `podman-compose.yaml` and `backend/test/pocketbase-harness.mjs` must agree; the file is now `backend/scripts/pocketbase-download.mjs`, see the #86 amendment) and `npm run test:pb`, which runs the PocketBase API rule tests (`backend/test/`). A cache step for the downloaded PocketBase release (`actions/cache`) sits before the tests, and the job has `timeout-minutes: 15`.
+- `test:pb` downloads the pinned PocketBase release from `github.com/pocketbase/pocketbase/releases`, verifies its SHA-256 against checksums stored in the harness (since moved to `backend/scripts/pocketbase-download.mjs`, see the #86 amendment), and runs it on a random local port against a temporary data directory with this repo's migrations. It never contacts the production API, and it does not use a local `backend/pocketbase` binary.
 - The required `build` check (ADR 0012) now depends on that download whenever the cache misses. If GitHub's release CDN is unavailable the download retries three times, then `build` fails. A checksum mismatch fails the job and is never retried. A failed run is re-run, or, as for any stuck check, covered by the admin bypass ADR 0012 reserves.
 
 ## Amendment (2026-11-02, #86)

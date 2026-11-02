@@ -2,7 +2,7 @@
 pb_data/
 
 # Local PocketBase binary (the image downloads its own)
-pocketbase
+/pocketbase
 
 # Exclude common development files
 *.log
