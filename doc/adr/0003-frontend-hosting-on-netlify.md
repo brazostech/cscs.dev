@@ -23,5 +23,5 @@ The custom domain `cscs.dev` is configured through Netlify's domain management. 
 - SSL/TLS is handled automatically by Netlify for the custom domain.
 - A Netlify status badge in `README.md` provides instant build status visibility.
 - Netlify is an external dependency; outages or pricing changes affect site availability.
-- Deployment is not gated by CI — Netlify builds and deploys independently of the GitHub Actions workflow (see [ADR 0009](0009-ci-cd-github-actions-and-netlify.md)), so a push could fail CI checks but still deploy to production.
+- Deployment is not gated by CI — Netlify builds and deploys independently of the GitHub Actions workflow (see [ADR 0009](0009-ci-cd-github-actions-and-netlify.md)), so a push could fail CI checks but still deploy to production. [ADR 0012](0012-branch-protection-via-repository-ruleset.md) narrows this by requiring checks on pull requests.
 - The absence of a `netlify.toml` means build configuration is not version-controlled. If Netlify's auto-detection behavior changes, the build could break without a code change.
