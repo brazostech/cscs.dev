@@ -102,7 +102,10 @@ gcloud compute ssh cscs-dev-backend --zone=us-central1-a --project=cscsdotdev
 # On the VM: confirm the container name (expected: pocketbase-pocketbase),
 # then run the superuser command inside it against the production data dir
 sudo podman ps --format '{{.Names}}'
-sudo podman exec -it pocketbase-pocketbase pocketbase superuser upsert you@example.com 'a-long-password' --dir=/data/pb_data
+# (/data/pb_data comes from the Quadlet config written by startup.sh)
+# The CLI takes the password as an argument, so it is visible in the process list and
+# shell history: use a throwaway password and change it in the dashboard afterwards
+sudo podman exec -it pocketbase-pocketbase pocketbase superuser upsert you@example.com 'temporary-password' --dir=/data/pb_data
 ```
 
 See [RUNBOOK.md](RUNBOOK.md) for the rest of VM access.

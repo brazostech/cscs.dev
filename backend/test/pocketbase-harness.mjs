@@ -32,7 +32,7 @@ const ARCH_NAMES = { x64: "amd64", arm64: "arm64" };
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../..");
 export const MIGRATIONS_DIR = join(repoRoot, "backend", "pb_migrations");
-// node_modules/ is gitignored, and CI already caches npm there.
+// node_modules/ is gitignored. (CI's npm cache does not cover it, so CI downloads each run.)
 const CACHE_DIR = join(repoRoot, "node_modules", ".cache", "pocketbase");
 
 export const SUPERUSER_EMAIL = "superuser@example.test";
@@ -53,25 +53,42 @@ export async function ensurePocketBase() {
   const binPath = join(dir, "pocketbase");
   mkdirSync(dir, { recursive: true });
 
-  if (existsSync(zipPath) && existsSync(binPath)) {
-    if (sha256(await readFile(zipPath)) === expected) return binPath;
-    rmSync(zipPath, { force: true });
+  let zip;
+  if (existsSync(zipPath)) {
+    const cached = await readFile(zipPath);
+    if (sha256(cached) === expected) zip = cached;
+    else rmSync(zipPath, { force: true });
   }
-
-  const url = `https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/${asset}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Download failed (${res.status}): ${url}`);
-  const zip = Buffer.from(await res.arrayBuffer());
-  const actual = sha256(zip);
-  if (actual !== expected) {
-    throw new Error(
-      `SHA-256 mismatch for ${asset}: expected ${expected}, got ${actual}`,
-    );
+  if (!zip) {
+    zip = await download(asset);
+    const actual = sha256(zip);
+    if (actual !== expected) {
+      throw new Error(
+        `SHA-256 mismatch for ${asset}: expected ${expected}, got ${actual}`,
+      );
+    }
+    await writeFile(zipPath, zip);
   }
-  await writeFile(zipPath, zip);
+  // Always re-extract from the verified zip so a partial binary is never used.
   execFileSync("unzip", ["-o", "-q", zipPath, "pocketbase", "-d", dir]);
   chmodSync(binPath, 0o755);
   return binPath;
+}
+
+async function download(asset) {
+  const url = `https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/${asset}`;
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+      if (!res.ok) throw new Error(`Download failed (${res.status}): ${url}`);
+      return Buffer.from(await res.arrayBuffer());
+    } catch (err) {
+      lastError = err;
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+  throw lastError;
 }
 
 function sha256(buf) {
@@ -118,7 +135,9 @@ export async function startPocketBase() {
   const stop = async () => {
     if (!exited) {
       child.kill("SIGTERM");
+      const killTimer = setTimeout(() => child.kill("SIGKILL"), 10_000);
       await new Promise((r) => child.once("exit", r));
+      clearTimeout(killTimer);
     }
     rmSync(dataDir, { recursive: true, force: true });
   };

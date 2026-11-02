@@ -37,6 +37,12 @@ jobs:
           grep -qE "^[[:space:]]*NODE_VERSION[[:space:]]*=[[:space:]]*\"${node_major}\"[[:space:]]*$" netlify.toml \
             || { echo "netlify.toml NODE_VERSION does not match .nvmrc (${node_major})"; exit 1; }
 
+      - name: Check PocketBase pins match the Containerfile
+        run: |
+          cf="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
+          grep -q "PB_VERSION = \"${cf}\"" backend/test/pocketbase-harness.mjs \
+            || { echo "backend/test/pocketbase-harness.mjs PB_VERSION does not match Containerfile (${cf})"; exit 1; }
+
       - name: Install dependencies
         run: npm ci
 

@@ -18,7 +18,7 @@
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "test:pb": "node --test backend/test/rsvp-rules.test.mjs",
+    "test:pb": "node --test 'backend/test/*.test.mjs'",
     "prepare": "husky",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

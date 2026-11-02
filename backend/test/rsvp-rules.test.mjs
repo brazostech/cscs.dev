@@ -110,6 +110,25 @@ describe("rsvps createRule", () => {
     assert.equal(await rsvpExists(userB), false);
   });
 
+  test("a missing user field is rejected", async () => {
+    const res = await api("POST", "/api/collections/rsvps/records", {
+      token: userA.token,
+      body: { event: eventId },
+    });
+    assert.ok([400, 403].includes(res.status), `status ${res.status}`);
+  });
+
+  test("an array user field cannot smuggle in another user", async () => {
+    const res = await api("POST", "/api/collections/rsvps/records", {
+      token: userA.token,
+      body: { event: eventId, user: [userA.id, userB.id] },
+    });
+    // Rejected, or PocketBase normalises it to a single id that is not B.
+    if (res.status === 200) assert.notEqual(res.json.user, userB.id);
+    else assert.ok([400, 403].includes(res.status), `status ${res.status}`);
+    assert.equal(await rsvpExists(userB), false);
+  });
+
   test("an anonymous request cannot create an RSVP", async () => {
     const res = await createRsvpAs(null, userB.id);
     assert.ok([400, 403].includes(res.status), `status ${res.status}`);
