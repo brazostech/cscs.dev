@@ -129,8 +129,9 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 - **Branches**: one branch per worktree, descriptive names (`fix-event-date-bug`, `feat-book-club-page`)
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
-- **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`.
-- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. All must pass before merge.
+- **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. Every change to `main` goes through a PR: the `main` ruleset rejects direct pushes, force-pushes and deletion (ADR 0012).
+- **Merging**: squash only, and the PR title and body become the commit subject and message on `main`, so the PR title must be a Conventional Commit (`feat:`, `fix:`, `docs:`, ...). Head branches are deleted automatically on merge. Auto-merge is allowed.
+- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. The `build` check (that whole job) must pass before merge. Netlify's `deploy-preview` is not required.
 
 ## Boundaries
 
@@ -142,7 +143,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 ## References
 
-- **Architecture decisions**: `doc/adr/` (11 ADRs covering hosting, runtime, CI/CD, etc.)
+- **Architecture decisions**: `doc/adr/` (12 ADRs covering hosting, runtime, CI/CD, etc.)
 - **Backend setup & deployment**: `backend/README.md`
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`

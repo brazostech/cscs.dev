@@ -35,3 +35,8 @@ Netlify watches the same repository and deploys independently when it detects a 
 - The format check now runs `prettier --check` (`npm run format:check`). The previous command expanded to `prettier --write . --check` and could not fail.
 - A typecheck step (`astro check`) was added.
 - The workflow declares `permissions: contents: read` and a concurrency group that cancels superseded runs on pull requests only.
+
+## Amendment (2026-11-01, #80)
+
+- [ADR 0012](0012-branch-protection-via-repository-ruleset.md) protects `main` with a ruleset: changes land only through squash-merged pull requests whose `build` check passed. This replaces the known gap above that "a push to `main` can fail CI but still deploy to Netlify". Only an admin bypass of the ruleset can now deploy a change that failed CI.
+- The Netlify `deploy-preview` check is deliberately not required; see ADR 0012.
