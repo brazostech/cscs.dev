@@ -45,11 +45,12 @@ vi.mock("../stores/authStore", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-/** The table row (a card on small screens) that holds an event's title. */
+/** The text of a row's Attending cell. */
 function attendingIn(row: ReturnType<typeof within>): string {
   return row.getAllByRole("cell")[3].textContent ?? "";
 }
 
+/** The table row (a card on small screens) that holds an event's title. */
 function rowFor(title: string): HTMLElement {
   const row = screen.getByText(title).closest("tr");
   if (!row) throw new Error(`No row for ${title}`);
@@ -492,6 +493,9 @@ describe("EventsList", () => {
 
       render(<EventsList />);
       await screen.findByText("Remove");
+      // Forget the initial load's collection calls so the next assertion pins
+      // the collection the delete itself targets.
+      mockCollection.mockClear();
 
       await user.click(
         within(rowFor("Remove")).getByRole("button", { name: /^Delete:/ }),
@@ -500,7 +504,7 @@ describe("EventsList", () => {
       expect(window.confirm).toHaveBeenCalledWith(
         "Are you sure you want to delete this event?",
       );
-      expect(mockCollection).toHaveBeenCalledWith("events");
+      expect(mockCollection).toHaveBeenNthCalledWith(1, "events");
       expect(mockDelete).toHaveBeenCalledWith(remove.id);
       await waitFor(() => expect(screen.queryByText("Remove")).toBeNull());
       expect(screen.getByText("Keep")).toBeInTheDocument();
