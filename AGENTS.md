@@ -20,6 +20,7 @@ npm run format       # Prettier (writes changes)
 npm run format:check # Prettier (check only, what CI runs)
 npm run check        # astro check (typecheck)
 npm run test:run     # Vitest (single run)
+npm run test:pb      # PocketBase API rule tests (downloads PocketBase v0.34.0)
 npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
 ```

@@ -52,6 +52,9 @@ jobs:
       - name: Run tests
         run: npm run test:run
 
+      - name: Run PocketBase API rule tests
+        run: npm run test:pb
+
       - name: Run build
         run: npm run build
 
