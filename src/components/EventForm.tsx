@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { pb } from "../lib/pocketbase";
+import { generateRecurringDates, generateSeriesId } from "../lib/recurrence";
 import { Button } from "./catalyst/button";
 import { Field, Label } from "./catalyst/fieldset";
 import { Input } from "./catalyst/input";
@@ -31,54 +32,54 @@ interface RecurrenceOptions {
   occurrences: number;
 }
 
-/**
- * Generate a unique series ID for recurring events.
- * Exported for testing.
- */
-export function generateSeriesId(): string {
-  return `series_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+interface CreatedEvent {
+  id: string;
+  date: string;
 }
 
 /**
- * Calculate future dates based on recurrence pattern.
- * Exported for testing.
+ * Delete records created earlier in a failed series.
+ * Tries every record even if one delete fails.
  *
- * @param startDate - Start date in YYYY-MM-DD format
- * @param pattern - Recurrence pattern: 'weekly', 'biweekly', or 'monthly'
- * @param count - Number of occurrences to generate
- * @returns Array of dates in YYYY-MM-DD format
+ * @returns The records that could not be deleted
  */
-export function generateRecurringDates(
-  startDate: string,
-  pattern: string,
-  count: number,
-): string[] {
-  const dates: string[] = [];
-  const start = new Date(startDate + "T00:00:00");
-
-  for (let i = 0; i < count; i++) {
-    const date = new Date(start);
-
-    switch (pattern) {
-      case "weekly":
-        date.setDate(start.getDate() + i * 7);
-        break;
-      case "biweekly":
-        date.setDate(start.getDate() + i * 14);
-        break;
-      case "monthly":
-        date.setMonth(start.getMonth() + i);
-        break;
+async function deleteCreated(created: CreatedEvent[]): Promise<CreatedEvent[]> {
+  const remaining: CreatedEvent[] = [];
+  for (const event of created) {
+    try {
+      await pb.collection("events").delete(event.id);
+    } catch {
+      remaining.push(event);
     }
-
-    // Format as YYYY-MM-DD
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    dates.push(`${year}-${month}-${day}`);
   }
+  return remaining;
+}
 
-  return dates;
+function describeSeriesFailure(
+  failedNumber: number,
+  total: number,
+  reason: string,
+  createdCount: number,
+  remaining: CreatedEvent[],
+): string {
+  const base = `Failed to create event ${failedNumber} of ${total}: ${reason.replace(/[.\s]+$/, "")}.`;
+  if (createdCount === 0) {
+    return `${base} No events were created.`;
+  }
+  if (remaining.length === 0) {
+    const removed =
+      createdCount === 1
+        ? "The 1 event already created was removed"
+        : `The ${createdCount} events already created were removed`;
+    return `${base} ${removed}, so nothing was saved. Please try again.`;
+  }
+  const n = remaining.length;
+  const stuck =
+    n === 1
+      ? "1 already-created event could not be removed and still exists"
+      : `${n} already-created events could not be removed and still exist`;
+  const dates = remaining.map((e) => e.date).join(", ");
+  return `${base} Cleanup failed: ${stuck}: ${dates}. Delete ${n === 1 ? "it" : "them"} from the events list before retrying.`;
 }
 
 export default function EventForm({
@@ -154,14 +155,33 @@ export default function EventForm({
           recurrence.occurrences,
         );
 
+        const created: CreatedEvent[] = [];
         for (let i = 0; i < dates.length; i++) {
           const eventData = {
             ...formData,
             date: dates[i],
             series_id: seriesId,
           };
-          await pb.collection("events").create(eventData);
-          setCreatedCount(i + 1);
+          try {
+            const record = await pb.collection("events").create(eventData);
+            created.push({ id: record.id, date: dates[i] });
+            setCreatedCount(i + 1);
+          } catch (err) {
+            const reason =
+              err instanceof Error ? err.message : "Failed to save event";
+            const remaining = await deleteCreated(created);
+            setCreatedCount(0);
+            setError(
+              describeSeriesFailure(
+                i + 1,
+                dates.length,
+                reason,
+                created.length,
+                remaining,
+              ),
+            );
+            return;
+          }
         }
       } else {
         // Create single event

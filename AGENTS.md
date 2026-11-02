@@ -66,7 +66,7 @@ src/
     catalyst/         # UI kit — wrap by default, edit only with a stated reason
   content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
-  lib/                # PocketBase client and helpers (pocketbase.ts)
+  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts)
   pages/              # File-based routing
     app/              # Authenticated pages (dashboard, events, books)
   stores/             # React state (authStore.ts → useAuth() hook)
@@ -104,7 +104,7 @@ Wrap Catalyst components in `src/components/` by default. Edit a file in `src/co
 Vitest + React Testing Library. Reference implementations:
 
 - **Component tests**: `src/components/EventForm.test.tsx`, `src/components/BookClubPage.test.tsx`
-- **Library tests**: `src/lib/pocketbase.test.ts`
+- **Library tests**: `src/lib/pocketbase.test.ts`, `src/lib/recurrence.test.ts` (pure functions, no mocks)
 - **Mock factories**: `src/test/mocks/factories.ts` (createMockEvent, createMockBook, etc.)
 - **PocketBase mock**: `src/test/mocks/pocketbase.ts` (createMockPocketBaseModule)
 
@@ -125,7 +125,7 @@ Markdown in `src/content/blog/` with required frontmatter: `title`, `description
 
 ### Date Handling
 
-Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` — never `new Date("YYYY-MM-DD")` which parses as UTC and shows wrong day in US timezones.
+Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` — never `new Date("YYYY-MM-DD")` which parses as UTC and shows wrong day in US timezones. Pure date arithmetic on a `YYYY-MM-DD` string (adding days or months) uses `Date.UTC` on the numeric parts, as `src/lib/recurrence.ts` does, so DST and the local timezone cannot shift the result.
 
 ## Git Workflow
 
