@@ -68,7 +68,7 @@ describe("BooksList", () => {
 
       render(<BooksList />);
 
-      expect(screen.getByText("Loading books...")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading books...");
       expect(screen.queryByText("No books")).toBeNull();
     });
 

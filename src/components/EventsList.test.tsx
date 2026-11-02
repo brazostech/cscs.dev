@@ -87,7 +87,7 @@ describe("EventsList", () => {
 
       render(<EventsList />);
 
-      expect(screen.getByText("Loading events...")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading events...");
     });
 
     it("shows the empty state when there are no events", async () => {
