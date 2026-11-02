@@ -62,7 +62,7 @@ function describeSeriesFailure(
   createdCount: number,
   remaining: CreatedEvent[],
 ): string {
-  const base = `Failed to create event ${failedNumber} of ${total}: ${reason}.`;
+  const base = `Failed to create event ${failedNumber} of ${total}: ${reason.replace(/[.\s]+$/, "")}.`;
   if (createdCount === 0) {
     return `${base} No events were created.`;
   }
@@ -146,7 +146,7 @@ export default function EventForm({
           recurrence.occurrences,
         );
 
-        const created: { id: string; date: string }[] = [];
+        const created: CreatedEvent[] = [];
         for (let i = 0; i < dates.length; i++) {
           const eventData = {
             ...formData,
