@@ -17,9 +17,14 @@ npm run build        # Production build to ./dist/
 npm run preview      # Preview production build
 npm run lint         # ESLint
 npm run format       # Prettier (writes changes)
+npm run format:check # Prettier (check only, what CI runs)
+npm run check        # astro check (typecheck)
 npm run test:run     # Vitest (single run)
 npm run test:coverage # Vitest with v8 coverage
+npm run build-storybook # Build Storybook
 ```
+
+Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfile` base image and `netlify.toml` `NODE_VERSION` must match it, and CI fails if they don't.
 
 ## Code Conventions
 
@@ -83,6 +88,7 @@ src/
 ### Catalyst UI Kit
 
 Located in `src/components/catalyst/`. Use these for UI consistency:
+
 - `Button`, `Input`, `Textarea`, `Select` — Form elements
 - `Field`, `Label`, `ErrorMessage` — Form field wrappers
 - `Heading`, `Text` — Typography
@@ -95,6 +101,7 @@ A hook soft-asks before editing catalyst/ files. Prefer wrapping over modifying.
 ### Testing
 
 Vitest + React Testing Library. Reference implementations:
+
 - **Component tests**: `src/components/EventForm.test.tsx`, `src/components/BookClubPage.test.tsx`
 - **Library tests**: `src/lib/pocketbase.test.ts`
 - **Mock factories**: `src/test/mocks/factories.ts` (createMockEvent, createMockBook, etc.)
@@ -105,6 +112,7 @@ Pattern: `vi.mock("../lib/pocketbase", ...)` with `vi.hoisted()` for variables u
 ### PocketBase Migrations
 
 Migration files in `backend/pb_migrations/` with timestamp prefixes:
+
 - New collection: see `1768138900_created_rsvps.js` pattern
 - Update collection: see `1768098549_updated_events_recurring.js` pattern
 - Each migration has up/down functions for reversibility
@@ -122,7 +130,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Branches**: one branch per worktree, descriptive names (`fix-event-date-bug`, `feat-book-club-page`)
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
 - **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`.
-- **CI**: PRs run lint, format check, tests, build via GitHub Actions. All must pass before merge.
+- **CI**: PRs run lint, format check, typecheck, tests, build, Storybook build via GitHub Actions. All must pass before merge.
 
 ## Boundaries
 
@@ -139,7 +147,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
 - **Feature roadmap**: `doc/improvements.md`
-- **CI pipeline**: `.github/workflows/ci.yml` (lint, format, test, build)
+- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, build, Storybook build)
 - **Hook & skill docs**: `.claude/README.md`
 
 ## Worktree Workflow
@@ -147,6 +155,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 All work happens in `.claude/worktrees/` (gitignored). `EnterWorktree` creates them automatically.
 
 **Rules**:
+
 - Use `EnterWorktree` before any implementation work
 - One worktree per unit of work (feature, bugfix, refactor)
 - `.claude/` config changes are exempt from the worktree requirement

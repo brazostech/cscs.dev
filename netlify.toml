@@ -1,0 +1,4 @@
+# Pin Node for Netlify builds. Keep in sync with .nvmrc (CI checks this).
+# File config wins over a NODE_VERSION set in the Netlify UI.
+[build.environment]
+  NODE_VERSION = "22"
