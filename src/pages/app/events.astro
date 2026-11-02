@@ -65,7 +65,7 @@ const description = "View and RSVP to upcoming events";
     import type { RsvpData } from "../../lib/pocketbase";
 
     // Check if user is logged in
-    const user = pb.authStore.model;
+    const user = pb.authStore.record;
     if (!user) {
       window.location.href = "/login";
     }

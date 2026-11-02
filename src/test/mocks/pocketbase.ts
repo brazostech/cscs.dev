@@ -37,7 +37,7 @@ export interface CollectionMocks {
 }
 
 export interface MockAuthStore {
-  model: MockUser | null;
+  record: MockUser | null;
   token: string;
   isValid: boolean;
   clear: Mock;
@@ -109,11 +109,11 @@ export function createMockPocketBase(
 
   // Auth store mock
   const authStore: MockAuthStore = {
-    model: user,
+    record: user,
     token: user ? "mock_token" : "",
     isValid: !!user,
     clear: vi.fn(() => {
-      authStore.model = null;
+      authStore.record = null;
       authStore.token = "";
       authStore.isValid = false;
     }),

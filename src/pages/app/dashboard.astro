@@ -31,7 +31,7 @@ const description = "App dashboard";
         return;
       }
 
-      const user = pb.authStore.model;
+      const user = pb.authStore.record;
       console.log("user:", user);
 
       if (!user) {
@@ -120,7 +120,7 @@ const description = "App dashboard";
       const messageDiv = document.getElementById("resend-message");
       if (!btn || !messageDiv) return;
 
-      const user = pb.authStore.model;
+      const user = pb.authStore.record;
       if (!user) return;
 
       btn.setAttribute("disabled", "true");

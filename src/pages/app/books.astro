@@ -57,7 +57,7 @@ const description = "Manage book club books";
   <script>
     import { pb } from "../../lib/pocketbase";
 
-    const user = pb.authStore.model;
+    const user = pb.authStore.record;
     if (!user) {
       window.location.href = "/login";
     }

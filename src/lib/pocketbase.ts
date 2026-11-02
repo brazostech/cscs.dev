@@ -68,7 +68,7 @@ export async function logout() {
 }
 
 export function getCurrentUser(): AuthUser | null {
-  return pb.authStore.model as AuthUser | null;
+  return pb.authStore.record as AuthUser | null;
 }
 
 export function isAuthenticated(): boolean {

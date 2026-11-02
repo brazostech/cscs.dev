@@ -31,7 +31,7 @@ const { mockState, collectionMethods } = vi.hoisted(() => {
     mockState: {
       collection,
       authStore: {
-        model: null as unknown,
+        record: null as unknown,
         token: "",
         isValid: false,
         clear: vi.fn(),
@@ -80,12 +80,12 @@ describe("RSVP Functions", () => {
     });
 
     // Set up authenticated user by default
-    mockState.authStore.model = mockUser;
+    mockState.authStore.record = mockUser;
     mockState.authStore.isValid = true;
   });
 
   afterEach(() => {
-    mockState.authStore.model = null;
+    mockState.authStore.record = null;
     mockState.authStore.isValid = false;
   });
 
@@ -96,7 +96,7 @@ describe("RSVP Functions", () => {
     });
 
     it("returns null when not authenticated", () => {
-      mockState.authStore.model = null;
+      mockState.authStore.record = null;
       const user = getCurrentUser();
       expect(user).toBeNull();
     });
@@ -117,7 +117,7 @@ describe("RSVP Functions", () => {
     });
 
     it("throws error when not logged in", async () => {
-      mockState.authStore.model = null;
+      mockState.authStore.record = null;
 
       await expect(rsvpToEvent("event123")).rejects.toThrow(
         "Must be logged in to RSVP",
@@ -161,7 +161,7 @@ describe("RSVP Functions", () => {
     });
 
     it("returns null when not logged in", async () => {
-      mockState.authStore.model = null;
+      mockState.authStore.record = null;
 
       const result = await getUserEventRsvp("event123");
 
@@ -187,7 +187,7 @@ describe("RSVP Functions", () => {
     });
 
     it("returns empty array when not logged in", async () => {
-      mockState.authStore.model = null;
+      mockState.authStore.record = null;
 
       const result = await getUserRsvps();
 
@@ -270,7 +270,7 @@ describe("RSVP Functions", () => {
     });
 
     it("returns empty object when not logged in", async () => {
-      mockState.authStore.model = null;
+      mockState.authStore.record = null;
 
       const result = await getUserEventRsvps(["event1"]);
 
