@@ -13,10 +13,14 @@ PocketBase migrations allow you to version control your database schema and sync
 The easiest way to create migrations is using the Admin Dashboard with automigrate enabled:
 
 ```bash
-# Start development environment
-podman-compose up
+# From the project root, start just PocketBase in a container:
+podman-compose up --build -d pocketbase
 
-# Navigate to Admin Dashboard
+# Or, on macOS arm64, run the committed binary from backend/:
+cd backend
+./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
+
+# Then open the Admin Dashboard
 # http://localhost:8080/_/
 ```
 
@@ -69,24 +73,28 @@ Migrations apply automatically on `pocketbase serve` startup, but you can manual
 # Revert last migration
 ./pocketbase migrate down 1
 
-# View migration history
+# Remove history entries for migration files that were deleted
 ./pocketbase migrate history-sync
 ```
 
 ## Production Deployment
 
-Your production workflow is already configured:
+Backend deployment is manual — there is no CI/CD deploy step (see [ADR 0010](../doc/adr/0010-backend-deployment-via-manual-script.md)). What does happen automatically:
 
-1. **Automatic Application**: Migrations in `backend/pb_migrations/` are copied into the container via the Containerfile
-2. **Volume Persistence**: The `pb_data` volume persists the database and migration history
-3. **On Startup**: When the container starts, PocketBase automatically applies pending migrations
-4. **Backups**: Your GCE block storage undergoes scheduled backups
+1. **Image contents**: Migrations in `backend/pb_migrations/` are copied into the container image by the `Containerfile`
+2. **Volume persistence**: The `pb_data` volume on the GCE persistent disk holds the database and the applied-migration history
+3. **On startup**: When the container starts, PocketBase applies pending migrations
+4. **Backups**: The GCE block storage runs scheduled snapshots
 
-**Migration Flow:**
+**Migration flow:**
 
 ```
-Local Changes → Git Commit → GitHub → CI/CD Build → GCE VM → Container Restart → Migrations Apply
+Local change → commit and PR → merge to main → (backend/) make build-push
+  → SSH to the VM → podman pull → systemctl restart pocketbase.service
+  → migrations apply on startup
 ```
+
+The build, push and restart commands are in [backend/README.md](README.md#deployment).
 
 ## Best Practices
 
@@ -143,7 +151,9 @@ For performance or uniqueness:
 3. Add index SQL: `CREATE INDEX idx_name ON table (column)`
 4. For unique: `CREATE UNIQUE INDEX idx_name ON table (column1, column2)`
 
-## Example: Events and RSVPs Schema
+## Schema reference: events and RSVPs
+
+This mirrors the committed migrations in `backend/pb_migrations/`. Update it when a migration changes the schema.
 
 ### Events Collection
 
@@ -152,16 +162,20 @@ Collection Type: Base
 Name: events
 
 Fields:
-- title (text, required)
+- title (text)
 - description (text)
-- event_type (select: "book-club", "meetup")
-- event_date (date, required)
-- event_time (text, required)
-- time_zone (text, default: "CST")
-- location (text, required)
+- tags (text)
+- type (text — the app uses "meetup" and "book-club")
+- location (text)
 - location_details (text)
-- max_attendees (number)
+- time_zone (text)
+- date (text, YYYY-MM-DD — text so it parses in local time)
+- time (text)
+- series_id (text — groups recurring events)
+- book (relation → books, single, optional)
 ```
+
+The original unique index on `title` was removed in `1768098549_updated_events_recurring.js` so recurring events can share a name.
 
 ### RSVPs Collection
 
@@ -170,32 +184,34 @@ Collection Type: Base
 Name: rsvps
 
 Fields:
-- event (relation → events, cascade delete, single)
-- user (relation → users, cascade delete, single)
-- status (select: "attending", "maybe", "declined")
+- event (relation → events, required, single, cascade delete)
+- user (relation → users, required, single, cascade delete)
+- created, updated (autodate)
 
 Indexes:
-CREATE UNIQUE INDEX idx_event_user ON rsvps (event, user)
+CREATE UNIQUE INDEX `idx_rsvp_event_user` ON `rsvps` (`event`, `user`)
 ```
+
+There is no `status` field: the app treats the existence of an RSVP as "attending" and cancels by deleting the record.
 
 ### Collection Rules (API Access)
 
-For each collection, set appropriate rules:
+These are the rules in the migrations:
 
 **Events:**
 
-- List: `@request.auth.id != ""` (authenticated users can list)
-- View: `@request.auth.id != ""` (authenticated users can view)
-- Create: `@request.auth.id != ""` (authenticated users can create)
-- Update: `@request.auth.id != ""` (authenticated users can update)
-- Delete: `@request.auth.id != ""` (authenticated users can delete)
+- List: `""` (public)
+- View: `""` (public)
+- Create: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Update: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Delete: `@request.auth.id != "" && @request.auth.role = "moderator"`
 
 **RSVPs:**
 
 - List: `@request.auth.id != ""` (authenticated users can list)
 - View: `@request.auth.id != ""` (authenticated users can view)
-- Create: `@request.auth.id != "" && @request.data.user = @request.auth.id` (users can only RSVP for themselves)
-- Update: `user = @request.auth.id` (users can only update their own RSVPs)
+- Create: `@request.auth.id != ""` (authenticated users can create; the client sends its own user id)
+- Update: unset (no one can update an RSVP)
 - Delete: `user = @request.auth.id` (users can only delete their own RSVPs)
 
 ## Troubleshooting
@@ -234,20 +250,11 @@ podman-compose restart pocketbase
 cp backend/pb_data/data.db.backup backend/pb_data/data.db
 ```
 
-## TypeScript Integration
+## TypeScript Types
 
-PocketBase generates TypeScript definitions automatically:
+PocketBase writes editor definitions to `backend/pb_data/types.d.ts`, and the migration files reference that path in a `/// <reference path="..." />` comment for editor support. `pb_data/` is gitignored: the file is generated locally, absent from a fresh clone, and never committed.
 
-- Location: `backend/pb_data/types.d.ts`
-- Updated when collections change
-- Use these types in your frontend code:
-
-```typescript
-import type { EventsResponse, RsvpsResponse } from "../backend/pb_data/types";
-
-// Type-safe record access
-const event: EventsResponse = await pb.collection("events").getOne("RECORD_ID");
-```
+Do not import from `pb_data/`. The app declares its PocketBase types by hand in `src/lib/pocketbase.ts` (`AuthUser`, `RsvpData`, `BookData`); update those interfaces when a schema change affects them.
 
 ## Resources
 
