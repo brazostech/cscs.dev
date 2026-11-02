@@ -26,4 +26,4 @@ Netlify watches the same repository and deploys independently when it detects a 
 - CI and deployment are decoupled. A push to `main` can fail CI but still deploy to Netlify, since Netlify does not wait for GitHub Actions to pass. This is a known gap.
 - There is no staging environment. Every merge to `main` deploys directly to production on Netlify.
 - The Astro build runs twice on every push to `main` — once in GitHub Actions (for validation) and once in Netlify (for deployment). This is redundant but acceptable at the current scale.
-- CI uses Node.js 20 on `ubuntu-latest`. The build artifact produced by CI is discarded — Netlify builds its own artifact.
+- CI, the dev container and Netlify all use the Node.js major version pinned in `.nvmrc` (22). CI runs on `ubuntu-latest`. The build artifact produced by CI is discarded — Netlify builds its own artifact.

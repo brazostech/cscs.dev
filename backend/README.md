@@ -16,12 +16,12 @@ podman-compose up --build -d
 
 ## Collections
 
-| Collection | Purpose | Public Read | Write Access |
-|-----------|---------|-------------|--------------|
-| `users` | Authentication (email/password) | No | Self-registration, self-update |
-| `events` | Event listings (meetups, book club) | Yes | Moderators only |
-| `rsvps` | Attendance tracking (user + event relation) | Authenticated | Self only |
-| `books` | Book club reading list | Yes | Moderators only |
+| Collection | Purpose                                     | Public Read   | Write Access                   |
+| ---------- | ------------------------------------------- | ------------- | ------------------------------ |
+| `users`    | Authentication (email/password)             | No            | Self-registration, self-update |
+| `events`   | Event listings (meetups, book club)         | Yes           | Moderators only                |
+| `rsvps`    | Attendance tracking (user + event relation) | Authenticated | Self only                      |
+| `books`    | Book club reading list                      | Yes           | Moderators only                |
 
 Roles: `user` (default), `moderator` (set via admin dashboard). See `doc/authentication.md` for details.
 
@@ -44,12 +44,14 @@ Hosted on a GCE e2-micro instance (~$8/month) running Podman via Quadlet. Applic
 ### Deploy Steps
 
 1. **Build and push** the container image (includes migrations):
+
    ```bash
    cd backend
    make build-push
    ```
 
 2. **SSH into the VM** and restart:
+
    ```bash
    ssh jackvincenthall@34.67.31.86
    gcloud auth print-access-token | sudo podman login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
