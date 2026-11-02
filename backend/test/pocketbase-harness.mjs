@@ -3,8 +3,16 @@
 // Never talks to api.cscs.dev: the server binds to 127.0.0.1 only.
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -32,7 +40,7 @@ const ARCH_NAMES = { x64: "amd64", arm64: "arm64" };
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../..");
 export const MIGRATIONS_DIR = join(repoRoot, "backend", "pb_migrations");
-// node_modules/ is gitignored. (CI's npm cache does not cover it, so CI downloads each run.)
+// node_modules/ is gitignored. CI caches this directory with actions/cache.
 const CACHE_DIR = join(repoRoot, "node_modules", ".cache", "pocketbase");
 
 export const SUPERUSER_EMAIL = "superuser@example.test";
@@ -67,11 +75,25 @@ export async function ensurePocketBase() {
         `SHA-256 mismatch for ${asset}: expected ${expected}, got ${actual}`,
       );
     }
-    await writeFile(zipPath, zip);
+    const tmpZip = `${zipPath}.${process.pid}.tmp`;
+    writeFileSync(tmpZip, zip);
+    renameSync(tmpZip, zipPath);
   }
-  // Always re-extract from the verified zip so a partial binary is never used.
-  execFileSync("unzip", ["-o", "-q", zipPath, "pocketbase", "-d", dir]);
-  chmodSync(binPath, 0o755);
+
+  // Extract from the verified bytes (not the path on disk, which could change
+  // after hashing) into a private directory, then rename the binary into place.
+  // The rename is atomic, so concurrent test files never see a partial binary
+  // or overwrite one that is running.
+  const work = mkdtempSync(join(dir, "extract-"));
+  try {
+    const verifiedZip = join(work, asset);
+    writeFileSync(verifiedZip, zip);
+    execFileSync("unzip", ["-o", "-q", verifiedZip, "pocketbase", "-d", work]);
+    chmodSync(join(work, "pocketbase"), 0o755);
+    renameSync(join(work, "pocketbase"), binPath);
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
   return binPath;
 }
 
@@ -85,7 +107,7 @@ async function download(asset) {
       return Buffer.from(await res.arrayBuffer());
     } catch (err) {
       lastError = err;
-      await new Promise((r) => setTimeout(r, attempt * 1000));
+      if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000));
     }
   }
   throw lastError;
@@ -115,51 +137,64 @@ export async function startPocketBase() {
   const dataDir = mkdtempSync(join(tmpdir(), "cscs-pb-test-"));
   const common = [`--dir=${dataDir}`, `--migrationsDir=${MIGRATIONS_DIR}`];
 
-  execFileSync(
-    bin,
-    ["superuser", "create", SUPERUSER_EMAIL, SUPERUSER_PASSWORD, ...common],
-    { stdio: "pipe" },
-  );
-
-  const port = await freePort();
-  const baseUrl = `http://127.0.0.1:${port}`;
-  const child = spawn(bin, ["serve", `--http=127.0.0.1:${port}`, ...common], {
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let output = "";
-  child.stdout.on("data", (d) => (output += d));
-  child.stderr.on("data", (d) => (output += d));
+  let child;
   let exited = false;
-  child.once("exit", () => (exited = true));
+  const killChild = () => {
+    if (child && !exited) child.kill("SIGKILL");
+  };
+  // Covers a normal exit and an uncaught error. A SIGKILL of the test
+  // process itself cannot be handled; the OS then leaves the child behind.
+  process.once("exit", killChild);
 
   const stop = async () => {
-    if (!exited) {
+    if (child && !exited) {
       child.kill("SIGTERM");
-      const killTimer = setTimeout(() => child.kill("SIGKILL"), 10_000);
+      const killTimer = setTimeout(killChild, 10_000);
       await new Promise((r) => child.once("exit", r));
       clearTimeout(killTimer);
     }
+    process.removeListener("exit", killChild);
     rmSync(dataDir, { recursive: true, force: true });
   };
 
-  const deadline = Date.now() + 30_000;
-  for (;;) {
-    if (exited) {
-      await stop();
-      throw new Error(`PocketBase exited during startup:\n${output}`);
-    }
-    try {
-      const res = await fetch(`${baseUrl}/api/health`);
-      if (res.ok) break;
-    } catch {
-      // not listening yet
-    }
-    if (Date.now() > deadline) {
-      await stop();
-      throw new Error(`PocketBase did not become healthy:\n${output}`);
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  try {
+    execFileSync(
+      bin,
+      ["superuser", "create", SUPERUSER_EMAIL, SUPERUSER_PASSWORD, ...common],
+      { stdio: "pipe" },
+    );
 
-  return { baseUrl, stop };
+    const port = await freePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    child = spawn(bin, ["serve", `--http=127.0.0.1:${port}`, ...common], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    child.stdout.on("data", (d) => (output += d));
+    child.stderr.on("data", (d) => (output += d));
+    child.once("exit", () => (exited = true));
+
+    const deadline = Date.now() + 30_000;
+    for (;;) {
+      if (exited)
+        throw new Error(`PocketBase exited during startup:\n${output}`);
+      try {
+        const res = await fetch(`${baseUrl}/api/health`, {
+          signal: AbortSignal.timeout(5_000),
+        });
+        if (res.ok) break;
+      } catch {
+        // not listening yet
+      }
+      if (Date.now() > deadline) {
+        throw new Error(`PocketBase did not become healthy:\n${output}`);
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    return { baseUrl, stop };
+  } catch (err) {
+    await stop();
+    throw err;
+  }
 }

@@ -1,5 +1,8 @@
 // API rule tests for the rsvps collection, run against a local PocketBase
 // started with this repo's migrations. See pocketbase-harness.mjs.
+//
+// Every test builds its own event and users, so a failing test cannot leave
+// state behind that breaks the next one.
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import {
@@ -8,21 +11,22 @@ import {
   SUPERUSER_PASSWORD,
 } from "./pocketbase-harness.mjs";
 
+const REJECTED = [400, 403];
+
 let pb;
 let baseUrl;
 let superToken;
-let eventId;
-let userA;
-let userB;
+let counter = 0;
 
-async function api(method, path, { token, body } = {}) {
+async function api(method, path, { token, body, raw } = {}) {
   const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       ...(body ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: token } : {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: raw ?? (body ? JSON.stringify(body) : undefined),
+    signal: AbortSignal.timeout(10_000),
   });
   const text = await res.text();
   return { status: res.status, json: text ? JSON.parse(text) : null };
@@ -42,7 +46,25 @@ async function createUser(name) {
   return { id: created.json.id, token: auth.json.token };
 }
 
-async function rsvpExists(user) {
+/** A fresh event plus two fresh users, A and B. */
+async function fresh() {
+  const n = ++counter;
+  const event = await api("POST", "/api/collections/events/records", {
+    token: superToken,
+    body: {
+      title: `Rule test event ${n}`,
+      description: "x",
+      type: "meetup",
+      date: "2026-12-01",
+      time: "18:00",
+    },
+  });
+  assert.equal(event.status, 200, JSON.stringify(event.json));
+  const [a, b] = [await createUser(`a-${n}`), await createUser(`b-${n}`)];
+  return { eventId: event.json.id, a, b };
+}
+
+async function rsvpExists(eventId, user) {
   const filter = encodeURIComponent(`event="${eventId}" && user="${user.id}"`);
   const res = await api(
     "GET",
@@ -53,11 +75,31 @@ async function rsvpExists(user) {
   return res.json.totalItems > 0;
 }
 
-async function createRsvpAs(actor, userId) {
+/** Creates an RSVP as a superuser, which bypasses the API rules (test setup). */
+async function seedRsvp(eventId, user) {
+  const res = await api("POST", "/api/collections/rsvps/records", {
+    token: superToken,
+    body: { event: eventId, user: user.id },
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.json));
+  return res.json.id;
+}
+
+function createRsvp(actor, body) {
   return api("POST", "/api/collections/rsvps/records", {
     token: actor?.token,
-    body: { event: eventId, user: userId },
+    body,
   });
+}
+
+/** Either rejected, or PocketBase stored the attacker's own id, never B's. */
+async function assertNoImpersonation(res, { eventId, a, b }) {
+  if (res.status === 200) {
+    assert.equal(res.json.user, a.id, "stored user must be the caller");
+  } else {
+    assert.ok(REJECTED.includes(res.status), `status ${res.status}`);
+  }
+  assert.equal(await rsvpExists(eventId, b), false);
 }
 
 before(async () => {
@@ -68,28 +110,10 @@ before(async () => {
   const su = await api(
     "POST",
     "/api/collections/_superusers/auth-with-password",
-    {
-      body: { identity: SUPERUSER_EMAIL, password: SUPERUSER_PASSWORD },
-    },
+    { body: { identity: SUPERUSER_EMAIL, password: SUPERUSER_PASSWORD } },
   );
   assert.equal(su.status, 200, JSON.stringify(su.json));
   superToken = su.json.token;
-
-  const event = await api("POST", "/api/collections/events/records", {
-    token: superToken,
-    body: {
-      title: "Rule test event",
-      description: "x",
-      type: "meetup",
-      date: "2026-12-01",
-      time: "18:00",
-    },
-  });
-  assert.equal(event.status, 200, JSON.stringify(event.json));
-  eventId = event.json.id;
-
-  userA = await createUser("user-a");
-  userB = await createUser("user-b");
 });
 
 after(async () => {
@@ -98,102 +122,158 @@ after(async () => {
 
 describe("rsvps createRule", () => {
   test("a signed-in user can RSVP as themselves", async () => {
-    const res = await createRsvpAs(userA, userA.id);
+    const { eventId, a } = await fresh();
+    const res = await createRsvp(a, { event: eventId, user: a.id });
     assert.equal(res.status, 200, JSON.stringify(res.json));
-    assert.equal(res.json.user, userA.id);
-    assert.equal(await rsvpExists(userA), true);
+    assert.equal(res.json.user, a.id);
+    assert.equal(await rsvpExists(eventId, a), true);
   });
 
   test("a signed-in user cannot RSVP on behalf of another user", async () => {
-    const res = await createRsvpAs(userA, userB.id);
-    assert.ok([400, 403].includes(res.status), `status ${res.status}`);
-    assert.equal(await rsvpExists(userB), false);
-  });
-
-  test("a missing user field is rejected", async () => {
-    const res = await api("POST", "/api/collections/rsvps/records", {
-      token: userA.token,
-      body: { event: eventId },
-    });
-    assert.ok([400, 403].includes(res.status), `status ${res.status}`);
-  });
-
-  test("an array user field cannot smuggle in another user", async () => {
-    const res = await api("POST", "/api/collections/rsvps/records", {
-      token: userA.token,
-      body: { event: eventId, user: [userA.id, userB.id] },
-    });
-    // Rejected, or PocketBase normalises it to a single id that is not B.
-    if (res.status === 200) assert.notEqual(res.json.user, userB.id);
-    else assert.ok([400, 403].includes(res.status), `status ${res.status}`);
-    assert.equal(await rsvpExists(userB), false);
+    const ctx = await fresh();
+    const res = await createRsvp(ctx.a, { event: ctx.eventId, user: ctx.b.id });
+    assert.ok(REJECTED.includes(res.status), `status ${res.status}`);
+    assert.equal(await rsvpExists(ctx.eventId, ctx.b), false);
   });
 
   test("an anonymous request cannot create an RSVP", async () => {
-    const res = await createRsvpAs(null, userB.id);
-    assert.ok([400, 403].includes(res.status), `status ${res.status}`);
-    assert.equal(await rsvpExists(userB), false);
+    const { eventId, b } = await fresh();
+    const res = await createRsvp(null, { event: eventId, user: b.id });
+    assert.ok(REJECTED.includes(res.status), `status ${res.status}`);
+    assert.equal(await rsvpExists(eventId, b), false);
+  });
+
+  test("a request without user is rejected (required-field validation)", async () => {
+    const { eventId, a } = await fresh();
+    const res = await createRsvp(a, { event: eventId });
+    assert.ok(REJECTED.includes(res.status), `status ${res.status}`);
+  });
+
+  for (const [label, value] of [
+    ["an empty string", ""],
+    ["null", null],
+  ]) {
+    test(`user as ${label} is rejected`, async () => {
+      const { eventId, a } = await fresh();
+      const res = await createRsvp(a, { event: eventId, user: value });
+      assert.ok(REJECTED.includes(res.status), `status ${res.status}`);
+    });
+  }
+
+  // PocketBase keeps one element of a multi-valued body field. Whichever it
+  // keeps, the stored value must be the caller's, so test both orders.
+  test("JSON arrays cannot smuggle in another user, in either order", async () => {
+    for (const order of ["ab", "ba"]) {
+      const ctx = await fresh();
+      const user = order === "ab" ? [ctx.a.id, ctx.b.id] : [ctx.b.id, ctx.a.id];
+      const res = await createRsvp(ctx.a, { event: ctx.eventId, user });
+      await assertNoImpersonation(res, ctx);
+    }
+  });
+
+  test("repeated multipart and urlencoded fields cannot smuggle in another user, in either order", async () => {
+    for (const kind of ["multipart", "urlencoded"]) {
+      for (const order of ["ab", "ba"]) {
+        const ctx = await fresh();
+        const ids =
+          order === "ab" ? [ctx.a.id, ctx.b.id] : [ctx.b.id, ctx.a.id];
+        const raw =
+          kind === "multipart" ? new FormData() : new URLSearchParams();
+        raw.append("event", ctx.eventId);
+        for (const id of ids) raw.append("user", id);
+        const res = await api("POST", "/api/collections/rsvps/records", {
+          token: ctx.a.token,
+          raw,
+        });
+        await assertNoImpersonation(res, ctx);
+      }
+    }
+  });
+});
+
+describe("rsvps listRule and viewRule", () => {
+  test("anonymous users cannot see RSVPs, signed-in users can", async () => {
+    const { eventId, a, b } = await fresh();
+    const rsvpId = await seedRsvp(eventId, b);
+
+    const anonList = await api("GET", "/api/collections/rsvps/records");
+    if (anonList.status === 200) assert.equal(anonList.json.items.length, 0);
+    else assert.ok([400, 401, 403].includes(anonList.status));
+    const anonView = await api(
+      "GET",
+      `/api/collections/rsvps/records/${rsvpId}`,
+    );
+    assert.ok(
+      [401, 403, 404].includes(anonView.status),
+      `status ${anonView.status}`,
+    );
+
+    const list = await api("GET", "/api/collections/rsvps/records", {
+      token: a.token,
+    });
+    assert.equal(list.status, 200);
+    assert.ok(list.json.items.some((r) => r.id === rsvpId));
+    const view = await api("GET", `/api/collections/rsvps/records/${rsvpId}`, {
+      token: a.token,
+    });
+    assert.equal(view.status, 200);
   });
 });
 
 describe("rsvps updateRule and deleteRule", () => {
-  let rsvpOfB;
-
-  before(async () => {
-    const res = await createRsvpAs(userB, userB.id);
-    assert.equal(res.status, 200, JSON.stringify(res.json));
-    rsvpOfB = res.json.id;
-  });
-
   test("a user cannot move another user's RSVP to themselves", async () => {
-    const res = await api(
-      "PATCH",
-      `/api/collections/rsvps/records/${rsvpOfB}`,
-      {
-        token: userA.token,
-        body: { user: userA.id },
-      },
-    );
+    const { eventId, a, b } = await fresh();
+    const rsvpId = await seedRsvp(eventId, b);
+    const res = await api("PATCH", `/api/collections/rsvps/records/${rsvpId}`, {
+      token: a.token,
+      body: { user: a.id },
+    });
     assert.ok([400, 403, 404].includes(res.status), `status ${res.status}`);
     const record = await api(
       "GET",
-      `/api/collections/rsvps/records/${rsvpOfB}`,
+      `/api/collections/rsvps/records/${rsvpId}`,
       {
         token: superToken,
       },
     );
-    assert.equal(record.json.user, userB.id);
+    assert.equal(record.json.user, b.id);
   });
 
   test("a user cannot update their own RSVP either (superuser only)", async () => {
-    const res = await api(
-      "PATCH",
-      `/api/collections/rsvps/records/${rsvpOfB}`,
-      {
-        token: userB.token,
-        body: { user: userB.id },
-      },
-    );
+    const { eventId, b } = await fresh();
+    const rsvpId = await seedRsvp(eventId, b);
+    const res = await api("PATCH", `/api/collections/rsvps/records/${rsvpId}`, {
+      token: b.token,
+      body: { user: b.id },
+    });
     assert.equal(res.status, 403);
   });
 
   test("a user cannot delete another user's RSVP", async () => {
+    const { eventId, a, b } = await fresh();
+    const rsvpId = await seedRsvp(eventId, b);
     const res = await api(
       "DELETE",
-      `/api/collections/rsvps/records/${rsvpOfB}`,
-      { token: userA.token },
+      `/api/collections/rsvps/records/${rsvpId}`,
+      {
+        token: a.token,
+      },
     );
     assert.ok([400, 403, 404].includes(res.status), `status ${res.status}`);
-    assert.equal(await rsvpExists(userB), true);
+    assert.equal(await rsvpExists(eventId, b), true);
   });
 
   test("a user can delete their own RSVP", async () => {
+    const { eventId, b } = await fresh();
+    const rsvpId = await seedRsvp(eventId, b);
     const res = await api(
       "DELETE",
-      `/api/collections/rsvps/records/${rsvpOfB}`,
-      { token: userB.token },
+      `/api/collections/rsvps/records/${rsvpId}`,
+      {
+        token: b.token,
+      },
     );
     assert.equal(res.status, 204);
-    assert.equal(await rsvpExists(userB), false);
+    assert.equal(await rsvpExists(eventId, b), false);
   });
 });
