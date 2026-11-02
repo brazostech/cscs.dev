@@ -1,6 +1,9 @@
 # Exclude persistent data from build context
 pb_data/
 
+# Local PocketBase binary (the image downloads its own)
+pocketbase
+
 # Exclude common development files
 *.log
 .DS_Store

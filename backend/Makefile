@@ -15,6 +15,10 @@ help: ## Show this help message
 	@echo 'Available targets:'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+.PHONY: pocketbase
+pocketbase: ## Install the pinned PocketBase for this OS/arch at ./pocketbase (checksum-verified, idempotent)
+	@node scripts/pocketbase-download.mjs $(CURDIR)/pocketbase
+
 .PHONY: build
 build: ## Build multi-arch image (local cache only)
 	podman build \

@@ -43,8 +43,8 @@ jobs:
           pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
           [ -n "$pb" ] \
             || { echo "ARG POCKETBASE_VERSION not found in backend/Containerfile"; exit 1; }
-          grep -Fxq "export const PB_VERSION = \"${pb}\";" backend/test/pocketbase-harness.mjs \
-            || { echo "PB_VERSION in backend/test/pocketbase-harness.mjs does not match Containerfile (${pb})"; exit 1; }
+          grep -Fxq "export const PB_VERSION = \"${pb}\";" backend/scripts/pocketbase-download.mjs \
+            || { echo "PB_VERSION in backend/scripts/pocketbase-download.mjs does not match Containerfile (${pb})"; exit 1; }
           grep -Eq "^[[:space:]]*POCKETBASE_VERSION:[[:space:]]*\"?${pb//./\\.}\"?[[:space:]]*$" podman-compose.yaml \
             || { echo "POCKETBASE_VERSION in podman-compose.yaml does not match Containerfile (${pb})"; exit 1; }
 
@@ -67,7 +67,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: node_modules/.cache/pocketbase
-          key: pocketbase-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/test/pocketbase-harness.mjs') }}
+          key: pocketbase-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/scripts/pocketbase-download.mjs') }}
 
       - name: Run PocketBase API rule tests
         run: npm run test:pb

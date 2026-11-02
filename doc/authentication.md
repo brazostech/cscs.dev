@@ -45,8 +45,8 @@ Access the PocketBase admin UI at `http://localhost:8080/_/`
 
 If you're running PocketBase locally outside of containers:
 
-1. Download PocketBase from [https://pocketbase.io/](https://pocketbase.io/)
-2. Start PocketBase: `./pocketbase serve --http=0.0.0.0:8080`
+1. Install the pinned PocketBase: `cd backend && make pocketbase` (writes `backend/pocketbase`, gitignored)
+2. Start PocketBase from `backend/`: `./pocketbase serve --http=0.0.0.0:8080`
 3. Create a `.env` file to set the URL:
 
 ```bash

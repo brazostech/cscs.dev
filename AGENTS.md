@@ -21,6 +21,7 @@ npm run format:check # Prettier (check only, what CI runs)
 npm run check        # astro check (typecheck)
 npm run test:run     # Vitest (single run)
 npm run test:pb      # PocketBase API rule tests (downloads PocketBase v0.34.0)
+(cd backend && make pocketbase) # Install the pinned PocketBase at backend/pocketbase (gitignored, not committed)
 npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
 ```
@@ -147,6 +148,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 
 - **Architecture decisions**: `doc/adr/` (12 ADRs covering hosting, runtime, CI/CD, etc.)
 - **Backend setup & deployment**: `backend/README.md`
+- **PocketBase version and checksums**: `backend/scripts/pocketbase-download.mjs` (must match `backend/Containerfile`)
 - **Backend operations runbook**: `backend/RUNBOOK.md`
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
