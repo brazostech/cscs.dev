@@ -28,7 +28,21 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+          check-latest: true
           cache: "npm"
+
+      - name: Check Node satisfies engines.node
+        run: |
+          node -e '
+            const range = require("./package.json").engines.node;
+            const m = /^>=(\d+)\.(\d+)\.(\d+)$/.exec(range);
+            if (!m) { console.error(`Unsupported engines.node range "${range}": update this step`); process.exit(2); }
+            const min = m.slice(1).map(Number);
+            const got = process.versions.node.split(".").map(Number);
+            const ok = [0, 1, 2].reduce((r, i) => r || Math.sign(got[i] - min[i]), 0) >= 0;
+            if (!ok) { console.error(`Node ${process.versions.node} does not satisfy engines.node ${range}; setup-node resolved a stale version`); process.exit(1); }
+            console.log(`Node ${process.versions.node} satisfies engines.node ${range}`);
+          '
 
       - name: Check Node pins match .nvmrc
         run: |
