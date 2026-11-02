@@ -13,6 +13,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import BooksList from "./BooksList";
+import type { BookRecord } from "../lib/types";
 import {
   createMockBook,
   createMockModerator,
@@ -164,9 +165,49 @@ describe("BooksList", () => {
       expect(done.queryByText("Reading")).toBeNull();
     });
 
+    it("labels a book with an unknown or empty status Completed", async () => {
+      mockGetFullList.mockResolvedValue([
+        createMockBook({
+          title: "Paused",
+          status: "paused" as BookRecord["status"],
+        }),
+        createMockBook({
+          title: "Unset",
+          status: "" as BookRecord["status"],
+        }),
+      ]);
+
+      render(<BooksList />);
+
+      await screen.findByText("Paused");
+      for (const title of ["Paused", "Unset"]) {
+        const card = within(cardFor(title));
+        expect(card.getByText("Completed")).toBeInTheDocument();
+        expect(card.queryByText("Reading")).toBeNull();
+      }
+    });
+
+    it("shows an order of 0 as 0", async () => {
+      mockGetFullList.mockResolvedValue([
+        createMockBook({ title: "First", sort_order: 0 }),
+      ]);
+
+      render(<BooksList />);
+
+      await screen.findByText("First");
+      expect(
+        within(cardFor("First")).getByText("Order: 0"),
+      ).toBeInTheDocument();
+    });
+
     it("omits the description when the book has none", async () => {
       mockGetFullList.mockResolvedValue([
-        createMockBook({ title: "Bare", author: "Someone", description: "" }),
+        createMockBook({
+          title: "Bare",
+          author: "Someone",
+          description: "",
+          sort_order: 5,
+        }),
         createMockBook({
           title: "Described",
           author: "Another",
@@ -177,14 +218,18 @@ describe("BooksList", () => {
       render(<BooksList />);
 
       await screen.findByText("Bare");
-      expect(cardFor("Bare").querySelectorAll("p")).toHaveLength(1);
-      expect(cardFor("Described").querySelectorAll("p")).toHaveLength(2);
+      // Nothing but the title, author, status and order: no stray text and no
+      // "undefined" where the description would be.
+      expect(cardFor("Bare")).toHaveTextContent(
+        /^Bareby SomeoneCompletedOrder: 5$/,
+      );
+      expect(screen.getAllByText("Has words.")).toHaveLength(1);
       expect(
         within(cardFor("Described")).getByText("Has words."),
       ).toBeVisible();
     });
 
-    it("shows a long title, author and description in full", async () => {
+    it("renders long text unabridged", async () => {
       const long = "Supercalifragilistic".repeat(12);
       mockGetFullList.mockResolvedValue([
         createMockBook({ title: long, author: long, description: long }),
@@ -438,6 +483,74 @@ describe("BooksList", () => {
       expect(
         within(cardFor("Stuck")).getByRole("button", { name: /^Delete:/ }),
       ).toBeEnabled();
+    });
+
+    it("shows the error panel, not an alert, when the reload after a delete fails", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      mockGetFullList
+        .mockResolvedValueOnce([
+          createMockBook({ title: "Gone" }),
+          createMockBook({ title: "Other" }),
+        ])
+        .mockRejectedValueOnce(new Error("Reload failed"));
+
+      render(<BooksList />);
+      await screen.findByText("Gone");
+
+      await user.click(
+        within(cardFor("Gone")).getByRole("button", { name: /^Delete:/ }),
+      );
+
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(
+        await screen.findByText("Error loading books"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Reload failed")).toBeInTheDocument();
+      expect(screen.queryByRole("list")).toBeNull();
+      expect(window.alert).not.toHaveBeenCalled();
+    });
+
+    it("keeps the first Delete disabled when a second delete finishes", async () => {
+      const user = userEvent.setup();
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const resolvers: Record<string, (value: unknown) => void> = {};
+      const a = createMockBook({ title: "Book A" });
+      const b = createMockBook({ title: "Book B" });
+      mockGetFullList.mockResolvedValue([a, b]);
+      mockDelete.mockImplementation(
+        (id: string) =>
+          new Promise((resolve) => {
+            resolvers[id] = resolve;
+          }),
+      );
+
+      render(<BooksList />);
+      await screen.findByText("Book A");
+
+      await user.click(
+        within(cardFor("Book A")).getByRole("button", { name: /^Delete:/ }),
+      );
+      await user.click(
+        within(cardFor("Book B")).getByRole("button", { name: /^Delete:/ }),
+      );
+      expect(
+        within(cardFor("Book A")).getByRole("button", { name: /^Delete:/ }),
+      ).toBeDisabled();
+      expect(
+        within(cardFor("Book B")).getByRole("button", { name: /^Delete:/ }),
+      ).toBeDisabled();
+
+      resolvers[b.id](true);
+
+      await waitFor(() =>
+        expect(
+          within(cardFor("Book B")).getByRole("button", { name: /^Delete:/ }),
+        ).toBeEnabled(),
+      );
+      expect(
+        within(cardFor("Book A")).getByRole("button", { name: /^Delete:/ }),
+      ).toBeDisabled();
     });
 
     it("alerts with a generic message when the delete rejects a non-Error", async () => {
