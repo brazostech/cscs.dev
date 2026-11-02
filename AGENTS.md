@@ -4,7 +4,7 @@ Instructions for AI coding agents. `CLAUDE.md` is a symlink to this file.
 
 ## Quick Start
 
-- **Project**: CSCS community website — Astro 5 + React 19, Tailwind CSS v4, PocketBase backend, Catalyst UI Kit
+- **Project**: CSCS community website — Astro 7 + React 19, Tailwind CSS v4, PocketBase backend, Catalyst UI Kit
 - **Worktree required**: All implementation work must happen in a git worktree. Use `EnterWorktree` before editing project files. A hook enforces this.
 - **GitHub MCP tools**: Use MCP tools (not `gh` CLI) for PRs, issues, etc. A hook redirects `gh` commands.
 - **Package manager**: npm only (yarn/pnpm/bun are denied by settings)
@@ -63,7 +63,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 src/
   components/         # React components
     catalyst/         # UI kit — don't modify, use as-is
-  content/blog/       # Markdown blog posts (Zod schema in content/config.ts)
+  content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
   lib/                # PocketBase client and helpers (pocketbase.ts)
   pages/              # File-based routing
