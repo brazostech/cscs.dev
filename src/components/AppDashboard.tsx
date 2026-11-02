@@ -41,8 +41,8 @@ function UnverifiedBanner({ user }: { user: UserRecord }) {
     setIsSending(true);
     try {
       await pb.collection("users").requestVerification(user.email);
-      // A sent email leaves the button disabled, as the old page did. Only a
-      // failure (below) lets the user try again.
+      // A sent email leaves the button disabled and labelled "Email sent", as
+      // the old page left it disabled. Only a failure (below) allows a retry.
       setResult("sent");
     } catch {
       setResult("failed");
@@ -78,11 +78,13 @@ function UnverifiedBanner({ user }: { user: UserRecord }) {
                 disabled={isSending}
                 className="text-sm font-medium text-yellow-800 underline hover:text-yellow-900 dark:text-yellow-200 dark:hover:text-yellow-100"
               >
-                {isSending
-                  ? "Sending..."
-                  : result === "failed"
-                    ? "Resend Verification Email"
-                    : "Resend verification email"}
+                {result === "sent"
+                  ? "Email sent"
+                  : isSending
+                    ? "Sending..."
+                    : result === "failed"
+                      ? "Resend Verification Email"
+                      : "Resend verification email"}
               </button>
             </div>
           </div>
@@ -102,7 +104,11 @@ function UnverifiedBanner({ user }: { user: UserRecord }) {
   );
 }
 
-/** The signed-in user's dashboard: email verification status and events. */
+/**
+ * The signed-in user's dashboard at `/app/dashboard`: email verification
+ * status and events. Not to be confused with `AccountDashboard`, the
+ * `/account` page.
+ */
 export default function AppDashboard() {
   const { user } = useAuth();
   const isLoggedIn = !!user;

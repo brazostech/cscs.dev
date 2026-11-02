@@ -129,6 +129,11 @@ describe("AppDashboard", () => {
     });
 
     it("requests verification for the user's email on the users collection", async () => {
+      // Mixed case and padded, so a normalised copy would not match.
+      const rawEmail = " New.Member@Example.com ";
+      mockUseAuth.mockReturnValue({
+        user: createMockUser({ verified: false, email: rawEmail }),
+      });
       const user = userEvent.setup();
       render(<AppDashboard />);
 
@@ -137,9 +142,7 @@ describe("AppDashboard", () => {
       expect(mockCollection).toHaveBeenCalledTimes(1);
       expect(mockCollection).toHaveBeenCalledWith("users");
       expect(mockRequestVerification).toHaveBeenCalledTimes(1);
-      expect(mockRequestVerification).toHaveBeenCalledWith(
-        "new.member@example.com",
-      );
+      expect(mockRequestVerification).toHaveBeenCalledWith(rawEmail);
     });
 
     it("disables the button and shows Sending... while the request is out", async () => {
@@ -155,7 +158,7 @@ describe("AppDashboard", () => {
       expect(screen.queryByRole("alert")).toBeNull();
     });
 
-    it("shows the success message and leaves the button disabled", async () => {
+    it("shows the success message and leaves the button disabled, labelled Email sent", async () => {
       const user = userEvent.setup();
       render(<AppDashboard />);
 
@@ -164,7 +167,8 @@ describe("AppDashboard", () => {
       expect(await screen.findByRole("status")).toHaveTextContent(
         "✓ Verification email sent! Check your inbox.",
       );
-      expect(screen.getByRole("button")).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Email sent" })).toBeDisabled();
+      expect(screen.queryByText("Sending...")).toBeNull();
       expect(screen.queryByRole("alert")).toBeNull();
       expect(
         screen.queryByText(
@@ -240,6 +244,43 @@ describe("AppDashboard", () => {
 
       expect(screen.queryByRole("status")).toBeNull();
       expect(screen.getByRole("button", { name: RESEND_LABEL })).toBeEnabled();
+    });
+
+    it("keeps the sent state when auth re-emits the same account", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<AppDashboard />);
+      await user.click(screen.getByRole("button", { name: RESEND_LABEL }));
+      await screen.findByRole("status");
+
+      // The same account in a new object, as an auth refresh would emit.
+      mockUseAuth.mockReturnValue({
+        user: { ...unverified, updated: "2030-01-01T00:00:00.000Z" },
+      });
+      rerender(<AppDashboard />);
+
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Verification email sent!",
+      );
+      expect(screen.getByRole("button", { name: "Email sent" })).toBeDisabled();
+      expect(mockRequestVerification).toHaveBeenCalledTimes(1);
+    });
+
+    it("switches to the verified banner when the user becomes verified", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<AppDashboard />);
+      await user.click(screen.getByRole("button", { name: RESEND_LABEL }));
+      await screen.findByRole("status");
+
+      mockUseAuth.mockReturnValue({ user: { ...unverified, verified: true } });
+      rerender(<AppDashboard />);
+
+      expect(screen.getByText("Your email is verified")).toBeInTheDocument();
+      expect(screen.queryByText("Email Verification Required")).toBeNull();
+      expect(screen.queryByRole("button")).toBeNull();
+      expect(screen.queryByText(/Verification email sent/)).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "Browse Events →" }),
+      ).toBeInTheDocument();
     });
 
     it("ignores a second click that lands before React re-renders", async () => {
@@ -325,6 +366,21 @@ describe("AppDashboard", () => {
       expect(mockRequestVerification).not.toHaveBeenCalled();
     });
 
+    it("redirects when the user signs out while the dashboard is open", () => {
+      mockUseAuth.mockReturnValue({ user: verified });
+      const { rerender } = render(<AppDashboard />);
+      expect(window.location.href).toBe("http://localhost:4321");
+      expect(screen.getByText("Your email is verified")).toBeInTheDocument();
+
+      mockUseAuth.mockReturnValue({ user: null });
+      rerender(<AppDashboard />);
+
+      expect(window.location.href).toBe("/login");
+      expect(screen.queryByText("Your email is verified")).toBeNull();
+      expect(screen.queryByText("No upcoming events")).toBeNull();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading...");
+    });
+
     it("does not redirect a signed-in user", () => {
       mockUseAuth.mockReturnValue({ user: verified });
 
@@ -337,7 +393,6 @@ describe("AppDashboard", () => {
   describe("logging", () => {
     it("never calls console.log, for any user or resend outcome", async () => {
       const log = vi.spyOn(console, "log").mockImplementation(() => {});
-      const user = userEvent.setup();
 
       for (const outcome of ["verified", "sent", "failed", "logged-out"]) {
         mockRequestVerification.mockReset();
@@ -356,7 +411,12 @@ describe("AppDashboard", () => {
         });
         const { unmount } = render(<AppDashboard />);
         if (outcome === "sent" || outcome === "failed") {
-          await user.click(screen.getByRole("button", { name: RESEND_LABEL }));
+          // Two clicks in one batch, so the in-flight guard branch runs too.
+          const button = screen.getByRole("button", { name: RESEND_LABEL });
+          act(() => {
+            button.click();
+            button.click();
+          });
           await screen.findByText(/Verification email sent|Failed to send/);
         }
         unmount();

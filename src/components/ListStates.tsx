@@ -6,7 +6,7 @@ export function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
-/** The loading state of a list page. `label` is the visible and announced text. */
+/** The loading state of a page that loads data. `label` is the visible and announced text. */
 export function Spinner({ label }: { label: string }) {
   return (
     <div role="status" className="py-12 text-center">
@@ -17,8 +17,9 @@ export function Spinner({ label }: { label: string }) {
 }
 
 /**
- * The empty and error states of a list page: an icon, a title and a message,
- * then any `children` (such as a link) below them.
+ * The empty and error states of a page that loads data or has nothing to
+ * show: an icon, a title and a message, then any `children` (such as a link)
+ * below them.
  */
 export function Notice({
   icon,
