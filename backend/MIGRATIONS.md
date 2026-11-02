@@ -87,7 +87,7 @@ Backend deployment is manual — there is no CI/CD deploy step (see [ADR 0010](.
 1. **Image contents**: Migrations in `backend/pb_migrations/` are copied into the container image by the `Containerfile`
 2. **Directory persistence**: The `pb_data` directory on the GCE persistent disk holds the database and the applied-migration history
 3. **On startup**: When the container starts, PocketBase applies pending migrations
-4. **Backups**: The GCE block storage runs scheduled snapshots
+4. **Backups**: The `pod-data` disk has daily snapshots at 03:00 UTC with 7-day retention. See [RUNBOOK.md](RUNBOOK.md#backups) for verification and restore.
 
 **Migration flow:**
 
