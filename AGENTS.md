@@ -31,7 +31,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 ### Formatting & Linting
 
 - **Prettier** with `prettier-plugin-astro` and `prettier-plugin-tailwindcss`
-- **ESLint** with TypeScript, Astro, and jsx-a11y plugins. `@typescript-eslint/no-explicit-any` is disabled.
+- **ESLint** 10 with TypeScript, Astro, and a11y plugins. The a11y rules cover `.astro` files only (not `.tsx` components) and come from `eslint-plugin-jsx-a11y-x` (the maintained fork of `eslint-plugin-jsx-a11y`, which does not support ESLint 10), loaded through `eslint-plugin-astro`'s `flat/jsx-a11y-recommended` config. `@typescript-eslint/no-explicit-any` is disabled.
 
 ### TypeScript
 
