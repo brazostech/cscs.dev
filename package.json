@@ -2,7 +2,7 @@
   "name": "cscs.dev",
   "type": "module",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.20"
   },
   "version": "0.0.1",
   "scripts": {
