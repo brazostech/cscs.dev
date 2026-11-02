@@ -1,4 +1,4 @@
-import { Subheading } from "./catalyst/heading";
+import { Heading, Subheading } from "./catalyst/heading";
 import { Text } from "./catalyst/text";
 
 /** The message of an `Error`, else `fallback` for anything else that was thrown. */
@@ -19,23 +19,30 @@ export function Spinner({ label }: { label: string }) {
 /**
  * The empty and error states of a page that loads data or has nothing to
  * show: an icon, a title and a message, then any `children` (such as a link)
- * below them.
+ * below them. `level` is the title's heading level: 3 by default, for a
+ * notice inside a page, or 1 when the notice is the whole page.
  */
 export function Notice({
   icon,
   title,
   message,
+  level = 3,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   message: string;
+  level?: 1 | 3;
   children?: React.ReactNode;
 }) {
   return (
     <div className="py-12 text-center">
       {icon}
-      <Subheading level={3}>{title}</Subheading>
+      {level === 1 ? (
+        <Heading level={1}>{title}</Heading>
+      ) : (
+        <Subheading level={3}>{title}</Subheading>
+      )}
       <Text className="mt-1">{message}</Text>
       {children}
     </div>
