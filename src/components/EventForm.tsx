@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { pb } from "../lib/pocketbase";
+import type { EventInput, EventRecord } from "../lib/types";
 import { generateRecurringDates, generateSeriesId } from "../lib/recurrence";
 import { Button } from "./catalyst/button";
 import { Field, Label } from "./catalyst/fieldset";
@@ -11,19 +12,6 @@ interface EventFormProps {
   eventId?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
-}
-
-interface EventData {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  time_zone: string;
-  location: string;
-  location_details?: string;
-  type: string;
-  tags: string;
-  series_id?: string;
 }
 
 interface RecurrenceOptions {
@@ -47,7 +35,7 @@ async function deleteCreated(created: CreatedEvent[]): Promise<CreatedEvent[]> {
   const remaining: CreatedEvent[] = [];
   for (const event of created) {
     try {
-      await pb.collection("events").delete(event.id);
+      await pb.collection<EventRecord>("events").delete(event.id);
     } catch {
       remaining.push(event);
     }
@@ -87,7 +75,7 @@ export default function EventForm({
   onSuccess,
   onCancel,
 }: EventFormProps) {
-  const [formData, setFormData] = useState<EventData>({
+  const [formData, setFormData] = useState<EventInput>({
     title: "",
     description: "",
     date: "",
@@ -116,7 +104,7 @@ export default function EventForm({
 
   async function loadEvent() {
     try {
-      const event = await pb.collection("events").getOne(eventId!);
+      const event = await pb.collection<EventRecord>("events").getOne(eventId!);
       setFormData({
         title: event.title || "",
         description: event.description || "",
@@ -145,7 +133,7 @@ export default function EventForm({
     try {
       if (eventId) {
         // Update existing event (no recurrence for edits)
-        await pb.collection("events").update(eventId, formData);
+        await pb.collection<EventRecord>("events").update(eventId, formData);
       } else if (recurrence.enabled) {
         // Create recurring events
         const seriesId = generateSeriesId();
@@ -163,7 +151,9 @@ export default function EventForm({
             series_id: seriesId,
           };
           try {
-            const record = await pb.collection("events").create(eventData);
+            const record = await pb
+              .collection<EventRecord>("events")
+              .create(eventData);
             created.push({ id: record.id, date: dates[i] });
             setCreatedCount(i + 1);
           } catch (err) {
@@ -185,7 +175,7 @@ export default function EventForm({
         }
       } else {
         // Create single event
-        await pb.collection("events").create(formData);
+        await pb.collection<EventRecord>("events").create(formData);
       }
 
       if (onSuccess) {
@@ -200,7 +190,7 @@ export default function EventForm({
     }
   }
 
-  function handleChange(field: keyof EventData, value: string) {
+  function handleChange(field: keyof EventInput, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 

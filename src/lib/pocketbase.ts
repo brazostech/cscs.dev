@@ -1,4 +1,5 @@
 import PocketBase from "pocketbase";
+import type { BookRecord, RsvpRecord, UserRecord } from "./types";
 
 // PocketBase URL - client-side only (static site)
 // Development: http://localhost:8080
@@ -27,17 +28,7 @@ export const pb = new PocketBase(PB_URL);
 pb.autoCancellation(false);
 
 // Types for user authentication
-export interface AuthUser {
-  id: string;
-  email: string;
-  name?: string;
-  username?: string;
-  avatar?: string;
-  verified: boolean;
-  role?: string;
-  created: string;
-  updated: string;
-}
+export type AuthUser = UserRecord;
 
 export interface RegisterData {
   email: string;
@@ -54,12 +45,12 @@ export interface LoginData {
 
 // Helper functions for authentication
 export async function register(data: RegisterData) {
-  return await pb.collection("users").create(data);
+  return await pb.collection<UserRecord>("users").create(data);
 }
 
 export async function login(data: LoginData) {
   return await pb
-    .collection("users")
+    .collection<UserRecord>("users")
     .authWithPassword(data.email, data.password);
 }
 
@@ -96,25 +87,7 @@ export async function requestVerification(email: string) {
 // RSVP Functions
 // ============================================
 
-export interface RsvpData {
-  id: string;
-  event: string;
-  user: string;
-  created: string;
-  updated: string;
-  expand?: {
-    event?: {
-      id: string;
-      title: string;
-      date: string;
-      time: string;
-      time_zone: string;
-      location: string;
-      location_details?: string;
-      type: string;
-    };
-  };
-}
+export type RsvpData = RsvpRecord;
 
 /**
  * RSVP to an event (creates attendance record)
@@ -122,7 +95,7 @@ export interface RsvpData {
 export async function rsvpToEvent(eventId: string): Promise<RsvpData> {
   const user = getCurrentUser();
   if (!user) throw new Error("Must be logged in to RSVP");
-  return await pb.collection("rsvps").create({
+  return await pb.collection<RsvpRecord>("rsvps").create({
     event: eventId,
     user: user.id,
   });
@@ -132,7 +105,7 @@ export async function rsvpToEvent(eventId: string): Promise<RsvpData> {
  * Cancel an RSVP (delete attendance record)
  */
 export async function cancelRsvp(rsvpId: string): Promise<void> {
-  await pb.collection("rsvps").delete(rsvpId);
+  await pb.collection<RsvpRecord>("rsvps").delete(rsvpId);
 }
 
 /**
@@ -146,7 +119,7 @@ export async function getUserEventRsvp(
   if (!user) return null;
   try {
     return await pb
-      .collection("rsvps")
+      .collection<RsvpRecord>("rsvps")
       .getFirstListItem(`event="${eventId}" && user="${user.id}"`);
   } catch {
     return null; // Not found
@@ -159,7 +132,7 @@ export async function getUserEventRsvp(
 export async function getUserRsvps(): Promise<RsvpData[]> {
   const user = getCurrentUser();
   if (!user) return [];
-  return await pb.collection("rsvps").getFullList({
+  return await pb.collection<RsvpRecord>("rsvps").getFullList({
     filter: `user="${user.id}"`,
     expand: "event",
     sort: "-created",
@@ -170,7 +143,7 @@ export async function getUserRsvps(): Promise<RsvpData[]> {
  * Get RSVP count for a single event
  */
 export async function getEventRsvpCount(eventId: string): Promise<number> {
-  const result = await pb.collection("rsvps").getList(1, 1, {
+  const result = await pb.collection<RsvpRecord>("rsvps").getList(1, 1, {
     filter: `event="${eventId}"`,
   });
   return result.totalItems;
@@ -186,7 +159,9 @@ export async function getEventRsvpCounts(
   if (eventIds.length === 0) return {};
 
   const filter = eventIds.map((id) => `event="${id}"`).join(" || ");
-  const rsvps = await pb.collection("rsvps").getFullList({ filter });
+  const rsvps = await pb
+    .collection<RsvpRecord>("rsvps")
+    .getFullList({ filter });
 
   const counts: Record<string, number> = {};
   eventIds.forEach((id) => (counts[id] = 0));
@@ -208,7 +183,9 @@ export async function getUserEventRsvps(
 
   const eventFilter = eventIds.map((id) => `event="${id}"`).join(" || ");
   const filter = `user="${user.id}" && (${eventFilter})`;
-  const rsvps = await pb.collection("rsvps").getFullList<RsvpData>({ filter });
+  const rsvps = await pb
+    .collection<RsvpRecord>("rsvps")
+    .getFullList({ filter });
 
   const rsvpMap: Record<string, RsvpData> = {};
   rsvps.forEach((rsvp) => {
@@ -221,20 +198,7 @@ export async function getUserEventRsvps(
 // Book Club Functions
 // ============================================
 
-export interface BookData {
-  id: string;
-  title: string;
-  author: string;
-  description: string;
-  cover_image: string;
-  status: "reading" | "completed";
-  purchase_link: string;
-  start_date: string;
-  end_date: string;
-  sort_order: number;
-  created: string;
-  updated: string;
-}
+export type BookData = BookRecord;
 
 /**
  * Get the currently-reading book (expects 0 or 1 result).
@@ -242,8 +206,8 @@ export interface BookData {
 export async function getCurrentBook(): Promise<BookData | null> {
   try {
     return await pb
-      .collection("books")
-      .getFirstListItem<BookData>('status="reading"');
+      .collection<BookRecord>("books")
+      .getFirstListItem('status="reading"');
   } catch {
     return null;
   }
@@ -253,7 +217,7 @@ export async function getCurrentBook(): Promise<BookData | null> {
  * Get all completed books, ordered by sort_order then end_date descending.
  */
 export async function getCompletedBooks(): Promise<BookData[]> {
-  return await pb.collection("books").getFullList<BookData>({
+  return await pb.collection<BookRecord>("books").getFullList({
     filter: 'status="completed"',
     sort: "sort_order,-end_date",
   });
@@ -263,7 +227,7 @@ export async function getCompletedBooks(): Promise<BookData[]> {
  * Get all books (for admin management).
  */
 export async function getAllBooks(): Promise<BookData[]> {
-  return await pb.collection("books").getFullList<BookData>({
+  return await pb.collection<BookRecord>("books").getFullList({
     sort: "-created",
   });
 }
