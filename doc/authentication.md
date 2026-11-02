@@ -137,7 +137,7 @@ You can extend the user collection in PocketBase to add custom fields:
 1. Go to PocketBase admin UI
 2. Navigate to Collections > users
 3. Add custom fields as needed
-4. Update `AuthUser` interface in `src/lib/pocketbase.ts`
+4. Update the `UserRecord` interface in `src/lib/types.ts`
 
 ### Email Verification
 

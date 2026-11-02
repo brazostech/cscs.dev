@@ -46,7 +46,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 - **Files**: kebab-case for pages (`create-event.astro`), PascalCase for components (`EventForm.tsx`)
 - **Components**: PascalCase. Default export for page-level, named exports for utilities.
 - **Functions**: camelCase
-- **Interfaces**: PascalCase with descriptive names (`AuthUser`, `EventData`, `BookData`)
+- **Interfaces**: PascalCase with descriptive names (`UserRecord`, `EventRecord`, `BookRecord`, defined in `src/lib/types.ts`)
 
 ### React
 

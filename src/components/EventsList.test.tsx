@@ -21,6 +21,7 @@ import {
   createMockUser,
 } from "../test/mocks";
 
+const mockCollection = vi.fn();
 const mockGetFullList = vi.fn();
 const mockDelete = vi.fn();
 const mockGetEventRsvpCounts = vi.fn();
@@ -30,10 +31,7 @@ const mockCancelRsvp = vi.fn();
 
 vi.mock("../lib/pocketbase", () => ({
   pb: {
-    collection: vi.fn(() => ({
-      getFullList: (...args: unknown[]) => mockGetFullList(...args),
-      delete: (...args: unknown[]) => mockDelete(...args),
-    })),
+    collection: (...args: unknown[]) => mockCollection(...args),
   },
   getEventRsvpCounts: (...args: unknown[]) => mockGetEventRsvpCounts(...args),
   getUserEventRsvps: (...args: unknown[]) => mockGetUserEventRsvps(...args),
@@ -48,6 +46,10 @@ vi.mock("../stores/authStore", () => ({
 }));
 
 /** The table row (a card on small screens) that holds an event's title. */
+function attendingIn(row: ReturnType<typeof within>): string {
+  return row.getAllByRole("cell")[3].textContent ?? "";
+}
+
 function rowFor(title: string): HTMLElement {
   const row = screen.getByText(title).closest("tr");
   if (!row) throw new Error(`No row for ${title}`);
@@ -59,14 +61,21 @@ describe("EventsList", () => {
   const moderator = createMockModerator({ id: "user_mod" });
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     window.location.href = "http://localhost:4321";
+    mockCollection.mockReturnValue({
+      getFullList: (...args: unknown[]) => mockGetFullList(...args),
+      delete: (...args: unknown[]) => mockDelete(...args),
+    });
+    mockRsvpToEvent.mockResolvedValue(createMockRsvp());
+    mockCancelRsvp.mockResolvedValue(undefined);
     mockUseAuth.mockReturnValue({ user: member });
     mockGetFullList.mockResolvedValue([]);
     mockDelete.mockResolvedValue(true);
     mockGetEventRsvpCounts.mockResolvedValue({});
     mockGetUserEventRsvps.mockResolvedValue({});
     vi.mocked(window.confirm).mockReturnValue(true);
+    vi.mocked(window.alert).mockReturnValue(undefined);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -142,6 +151,7 @@ describe("EventsList", () => {
       render(<EventsList />);
 
       await screen.findByText("First Event");
+      expect(mockCollection).toHaveBeenCalledWith("events");
       expect(mockGetFullList).toHaveBeenCalledWith({ sort: "date" });
       expect(mockGetEventRsvpCounts).toHaveBeenCalledWith([
         first.id,
@@ -180,7 +190,7 @@ describe("EventsList", () => {
       expect(row.getByText("18:00 CST")).toBeInTheDocument();
       expect(row.getByText("Cowork Space")).toBeInTheDocument();
       expect(row.getByText("Room 4")).toBeInTheDocument();
-      expect(row.getByText("3 attending")).toBeInTheDocument();
+      expect(attendingIn(row)).toBe("3 attending");
       expect(screen.getAllByText("Rust Meetup")).toHaveLength(1);
     });
 
@@ -195,12 +205,26 @@ describe("EventsList", () => {
       render(<EventsList />);
 
       await screen.findByText("No Details");
-      expect(
-        within(rowFor("No Details")).queryByText("123 Test Street"),
-      ).toBeNull();
-      expect(
-        within(rowFor("No Details")).getByText("Somewhere"),
-      ).toBeInTheDocument();
+      const locationCell = within(rowFor("No Details")).getAllByRole("cell")[2];
+      expect(locationCell).toHaveTextContent(/^Somewhere$/);
+      expect(locationCell.querySelectorAll("div > div")).toHaveLength(1);
+    });
+
+    it("shows the location details line under the location", async () => {
+      const event = createMockEvent({
+        title: "With Details",
+        location: "Somewhere",
+        location_details: "Room 4",
+      });
+      mockGetFullList.mockResolvedValue([event]);
+
+      render(<EventsList />);
+
+      await screen.findByText("With Details");
+      const locationCell = within(rowFor("With Details")).getAllByRole(
+        "cell",
+      )[2];
+      expect(locationCell).toHaveTextContent(/^SomewhereRoom 4$/);
     });
 
     it("shows zero attending when the counts have no entry", async () => {
@@ -209,9 +233,7 @@ describe("EventsList", () => {
       render(<EventsList />);
 
       await screen.findByText("Quiet");
-      expect(
-        within(rowFor("Quiet")).getByText("0 attending"),
-      ).toBeInTheDocument();
+      expect(attendingIn(within(rowFor("Quiet")))).toBe("0 attending");
     });
   });
 
@@ -247,9 +269,9 @@ describe("EventsList", () => {
       await screen.findByText("Booked");
       const row = within(rowFor("Booked"));
       expect(
-        row.getByRole("button", { name: "Attending" }),
+        row.getByRole("button", { name: /^Attending:/ }),
       ).toBeInTheDocument();
-      expect(row.queryByRole("button", { name: "RSVP" })).toBeNull();
+      expect(row.queryByRole("button", { name: /^RSVP:/ })).toBeNull();
     });
 
     it("creates an RSVP, then cancels it, updating the button and count", async () => {
@@ -264,24 +286,24 @@ describe("EventsList", () => {
       render(<EventsList />);
       await screen.findByText("Toggle Me");
       const row = within(rowFor("Toggle Me"));
-      expect(row.getByText("2 attending")).toBeInTheDocument();
+      expect(attendingIn(row)).toBe("2 attending");
 
-      await user.click(row.getByRole("button", { name: "RSVP" }));
+      await user.click(row.getByRole("button", { name: /^RSVP:/ }));
 
       expect(mockRsvpToEvent).toHaveBeenCalledWith(event.id);
       expect(
-        await row.findByRole("button", { name: "Attending" }),
+        await row.findByRole("button", { name: /^Attending:/ }),
       ).toBeInTheDocument();
-      expect(row.getByText("3 attending")).toBeInTheDocument();
+      expect(attendingIn(row)).toBe("3 attending");
       expect(mockCancelRsvp).not.toHaveBeenCalled();
 
-      await user.click(row.getByRole("button", { name: "Attending" }));
+      await user.click(row.getByRole("button", { name: /^Attending:/ }));
 
       expect(mockCancelRsvp).toHaveBeenCalledWith("rsvp_new");
       expect(
-        await row.findByRole("button", { name: "RSVP" }),
+        await row.findByRole("button", { name: /^RSVP:/ }),
       ).toBeInTheDocument();
-      expect(row.getByText("2 attending")).toBeInTheDocument();
+      expect(attendingIn(row)).toBe("2 attending");
     });
 
     it("cancels a loaded RSVP using its record id", async () => {
@@ -297,10 +319,10 @@ describe("EventsList", () => {
       await screen.findByText("Loaded RSVP");
       const row = within(rowFor("Loaded RSVP"));
 
-      await user.click(row.getByRole("button", { name: "Attending" }));
+      await user.click(row.getByRole("button", { name: /^Attending:/ }));
 
       expect(mockCancelRsvp).toHaveBeenCalledWith("rsvp_loaded");
-      expect(await row.findByText("0 attending")).toBeInTheDocument();
+      await waitFor(() => expect(attendingIn(row)).toBe("0 attending"));
     });
 
     it("only changes the event that was toggled", async () => {
@@ -315,17 +337,15 @@ describe("EventsList", () => {
       await screen.findByText("Event A");
 
       await user.click(
-        within(rowFor("Event A")).getByRole("button", { name: "RSVP" }),
+        within(rowFor("Event A")).getByRole("button", { name: /^RSVP:/ }),
       );
 
+      await waitFor(() =>
+        expect(attendingIn(within(rowFor("Event A")))).toBe("1 attending"),
+      );
+      expect(attendingIn(within(rowFor("Event B")))).toBe("5 attending");
       expect(
-        await within(rowFor("Event A")).findByText("1 attending"),
-      ).toBeInTheDocument();
-      expect(
-        within(rowFor("Event B")).getByText("5 attending"),
-      ).toBeInTheDocument();
-      expect(
-        within(rowFor("Event B")).getByRole("button", { name: "RSVP" }),
+        within(rowFor("Event B")).getByRole("button", { name: /^RSVP:/ }),
       ).toBeInTheDocument();
     });
 
@@ -344,13 +364,67 @@ describe("EventsList", () => {
       await screen.findByText("Slow");
       const row = within(rowFor("Slow"));
 
-      await user.click(row.getByRole("button", { name: "RSVP" }));
-      expect(row.getByRole("button", { name: "RSVP" })).toBeDisabled();
+      await user.click(row.getByRole("button", { name: /^RSVP:/ }));
+      expect(row.getByRole("button", { name: /^RSVP:/ })).toBeDisabled();
 
       resolve(createMockRsvp({ event: event.id }));
       expect(
-        await row.findByRole("button", { name: "Attending" }),
+        await row.findByRole("button", { name: /^Attending:/ }),
       ).toBeEnabled();
+    });
+
+    it("alerts and leaves the state alone when cancelling the RSVP fails", async () => {
+      const user = userEvent.setup();
+      const event = createMockEvent({ title: "Cancel Fails" });
+      const rsvp = createMockRsvp({ id: "rsvp_keep", event: event.id });
+      mockGetFullList.mockResolvedValue([event]);
+      mockGetEventRsvpCounts.mockResolvedValue({ [event.id]: 2 });
+      mockGetUserEventRsvps.mockResolvedValue({ [event.id]: rsvp });
+      mockCancelRsvp.mockRejectedValue(new Error("Cancel refused"));
+
+      render(<EventsList />);
+      await screen.findByText("Cancel Fails");
+      const row = within(rowFor("Cancel Fails"));
+
+      await user.click(row.getByRole("button", { name: /^Attending:/ }));
+
+      await waitFor(() =>
+        expect(window.alert).toHaveBeenCalledWith(
+          "Failed to update RSVP: Cancel refused",
+        ),
+      );
+      expect(mockCancelRsvp).toHaveBeenCalledWith("rsvp_keep");
+      expect(row.getByRole("button", { name: /^Attending:/ })).toBeEnabled();
+      expect(attendingIn(row)).toBe("2 attending");
+    });
+
+    it("labels the controls with the event title and exposes the RSVP state", async () => {
+      mockUseAuth.mockReturnValue({ user: moderator });
+      const going = createMockEvent({ title: "Going" });
+      const notGoing = createMockEvent({ title: "Not Going" });
+      mockGetFullList.mockResolvedValue([going, notGoing]);
+      mockGetUserEventRsvps.mockResolvedValue({
+        [going.id]: createMockRsvp({ event: going.id }),
+      });
+
+      render(<EventsList />);
+      await screen.findByText("Going");
+
+      expect(
+        screen.getByRole("button", { name: "Attending: Going", pressed: true }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "RSVP: Not Going",
+          pressed: false,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Delete: Going" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Edit: Going" }),
+      ).toBeInTheDocument();
     });
 
     it("alerts and leaves the state alone when the RSVP fails", async () => {
@@ -364,15 +438,15 @@ describe("EventsList", () => {
       await screen.findByText("Fails");
       const row = within(rowFor("Fails"));
 
-      await user.click(row.getByRole("button", { name: "RSVP" }));
+      await user.click(row.getByRole("button", { name: /^RSVP:/ }));
 
       await waitFor(() =>
         expect(window.alert).toHaveBeenCalledWith(
           "Failed to update RSVP: Server said no",
         ),
       );
-      expect(row.getByRole("button", { name: "RSVP" })).toBeEnabled();
-      expect(row.getByText("1 attending")).toBeInTheDocument();
+      expect(row.getByRole("button", { name: /^RSVP:/ })).toBeEnabled();
+      expect(attendingIn(row)).toBe("1 attending");
     });
   });
 
@@ -384,8 +458,8 @@ describe("EventsList", () => {
       await screen.findByText("Plain");
 
       expect(screen.queryByRole("link", { name: /create event/i })).toBeNull();
-      expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
-      expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+      expect(screen.queryByRole("link", { name: /^Edit:/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Delete:/ })).toBeNull();
     });
 
     it("shows Create, Edit and Delete to moderators with the right links", async () => {
@@ -400,11 +474,11 @@ describe("EventsList", () => {
         screen.getByRole("link", { name: /create event/i }),
       ).toHaveAttribute("href", "/app/create-event");
       const row = within(rowFor("Managed"));
-      expect(row.getByRole("link", { name: "Edit" })).toHaveAttribute(
+      expect(row.getByRole("link", { name: /^Edit:/ })).toHaveAttribute(
         "href",
         `/app/create-event?edit=${event.id}`,
       );
-      expect(row.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+      expect(row.getByRole("button", { name: /^Delete:/ })).toBeInTheDocument();
     });
 
     it("deletes after confirmation and reloads the list", async () => {
@@ -420,12 +494,13 @@ describe("EventsList", () => {
       await screen.findByText("Remove");
 
       await user.click(
-        within(rowFor("Remove")).getByRole("button", { name: "Delete" }),
+        within(rowFor("Remove")).getByRole("button", { name: /^Delete:/ }),
       );
 
       expect(window.confirm).toHaveBeenCalledWith(
         "Are you sure you want to delete this event?",
       );
+      expect(mockCollection).toHaveBeenCalledWith("events");
       expect(mockDelete).toHaveBeenCalledWith(remove.id);
       await waitFor(() => expect(screen.queryByText("Remove")).toBeNull());
       expect(screen.getByText("Keep")).toBeInTheDocument();
@@ -442,7 +517,7 @@ describe("EventsList", () => {
       await screen.findByText("Safe");
 
       await user.click(
-        within(rowFor("Safe")).getByRole("button", { name: "Delete" }),
+        within(rowFor("Safe")).getByRole("button", { name: /^Delete:/ }),
       );
 
       expect(mockDelete).not.toHaveBeenCalled();
@@ -464,12 +539,12 @@ describe("EventsList", () => {
       await screen.findByText("Once");
       const row = within(rowFor("Once"));
 
-      await user.click(row.getByRole("button", { name: "Delete" }));
-      expect(row.getByRole("button", { name: "Delete" })).toBeDisabled();
+      await user.click(row.getByRole("button", { name: /^Delete:/ }));
+      expect(row.getByRole("button", { name: /^Delete:/ })).toBeDisabled();
 
       resolve(true);
       await waitFor(() =>
-        expect(row.getByRole("button", { name: "Delete" })).toBeEnabled(),
+        expect(row.getByRole("button", { name: /^Delete:/ })).toBeEnabled(),
       );
     });
 
@@ -483,7 +558,7 @@ describe("EventsList", () => {
       await screen.findByText("Stuck");
 
       await user.click(
-        within(rowFor("Stuck")).getByRole("button", { name: "Delete" }),
+        within(rowFor("Stuck")).getByRole("button", { name: /^Delete:/ }),
       );
 
       await waitFor(() =>
@@ -502,6 +577,11 @@ describe("EventsList", () => {
       render(<EventsList />);
 
       await waitFor(() => expect(window.location.href).toBe("/login"));
+      expect(mockCollection).not.toHaveBeenCalled();
+      expect(mockGetFullList).not.toHaveBeenCalled();
+      expect(mockGetEventRsvpCounts).not.toHaveBeenCalled();
+      expect(mockGetUserEventRsvps).not.toHaveBeenCalled();
+      expect(screen.queryByRole("table")).toBeNull();
     });
   });
 });

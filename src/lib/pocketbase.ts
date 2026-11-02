@@ -28,6 +28,7 @@ export const pb = new PocketBase(PB_URL);
 pb.autoCancellation(false);
 
 // Types for user authentication
+/** @deprecated use `UserRecord` from `./types` */
 export type AuthUser = UserRecord;
 
 export interface RegisterData {
@@ -87,6 +88,7 @@ export async function requestVerification(email: string) {
 // RSVP Functions
 // ============================================
 
+/** @deprecated use `RsvpRecord` from `./types` */
 export type RsvpData = RsvpRecord;
 
 /**
@@ -198,6 +200,7 @@ export async function getUserEventRsvps(
 // Book Club Functions
 // ============================================
 
+/** @deprecated use `BookRecord` from `./types` */
 export type BookData = BookRecord;
 
 /**

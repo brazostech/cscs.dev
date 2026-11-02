@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CalendarIcon,
   ExclamationTriangleIcon,
@@ -15,6 +15,7 @@ import {
 } from "../lib/pocketbase";
 import type { EventRecord, RsvpRecord } from "../lib/types";
 import { useAuth } from "../stores/authStore";
+import { BadgeButton } from "./catalyst/badge";
 import { Button } from "./catalyst/button";
 import { Heading, Subheading } from "./catalyst/heading";
 import { Text } from "./catalyst/text";
@@ -87,11 +88,11 @@ function EventRow({
   return (
     <tr
       role="row"
-      className="grid grid-cols-2 gap-y-3 rounded-lg border border-zinc-200 bg-white p-4 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 dark:border-zinc-800 dark:bg-zinc-900 dark:lg:bg-transparent"
+      className="flex flex-wrap items-center gap-y-3 rounded-lg border border-zinc-200 bg-white p-4 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 dark:border-zinc-800 dark:bg-zinc-900 dark:lg:bg-transparent"
     >
       <td
         role="cell"
-        className="col-span-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap"
+        className="w-full lg:table-cell lg:w-auto lg:px-6 lg:py-4"
       >
         <div className="text-sm font-medium text-zinc-900 dark:text-white">
           {event.title}
@@ -102,7 +103,7 @@ function EventRow({
       </td>
       <td
         role="cell"
-        className="col-span-2 flex items-start gap-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap"
+        className="flex w-full items-start gap-2 lg:table-cell lg:w-auto lg:px-6 lg:py-4"
       >
         <CalendarIcon
           aria-hidden="true"
@@ -119,7 +120,7 @@ function EventRow({
       </td>
       <td
         role="cell"
-        className="col-span-2 flex items-start gap-2 lg:table-cell lg:px-6 lg:py-4 lg:whitespace-nowrap"
+        className="flex w-full items-start gap-2 lg:table-cell lg:w-auto lg:px-6 lg:py-4"
       >
         <MapPinIcon
           aria-hidden="true"
@@ -136,40 +137,47 @@ function EventRow({
           )}
         </div>
       </td>
+      {/* Cards read "N attending"; the table column header says it already. */}
       <td
         role="cell"
-        className="flex items-center gap-1 border-t border-zinc-100 pt-3 text-xs text-zinc-500 lg:table-cell lg:border-0 lg:px-6 lg:py-4 lg:text-center lg:text-sm dark:border-zinc-800 dark:text-zinc-400"
+        className="flex items-center gap-1 text-xs text-zinc-500 lg:table-cell lg:px-6 lg:py-4 lg:text-center lg:text-sm dark:text-zinc-400"
       >
         <UsersIcon aria-hidden="true" className="h-4 w-4 lg:hidden" />
-        <span>{count} attending</span>
+        <span>{count}</span>
+        <span className="lg:sr-only"> attending</span>
       </td>
       <td
         role="cell"
-        className="flex items-center justify-end gap-2 border-t border-zinc-100 pt-3 lg:table-cell lg:border-0 lg:px-6 lg:py-4 lg:text-right dark:border-zinc-800"
+        className="ml-auto flex flex-wrap items-center justify-end gap-2 lg:table-cell lg:px-6 lg:py-4 lg:text-right"
       >
-        <div className="flex items-center justify-end gap-2">
-          <Button
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <BadgeButton
             color={isAttending ? "emerald" : "indigo"}
             disabled={isPending}
+            aria-pressed={isAttending}
+            aria-label={`${isAttending ? "Attending" : "RSVP"}: ${event.title}`}
+            className="data-disabled:opacity-50"
             onClick={() => onToggleRsvp(event)}
           >
             {isAttending ? "Attending" : "RSVP"}
-          </Button>
+          </BadgeButton>
           {isModerator && (
             <>
-              <Button
-                outline
+              <BadgeButton
                 href={`/app/create-event?edit=${encodeURIComponent(event.id)}`}
+                aria-label={`Edit: ${event.title}`}
               >
                 Edit
-              </Button>
-              <Button
+              </BadgeButton>
+              <BadgeButton
                 color="red"
                 disabled={isPending}
+                aria-label={`Delete: ${event.title}`}
+                className="data-disabled:opacity-50"
                 onClick={() => onDelete(event)}
               >
                 Delete
-              </Button>
+              </BadgeButton>
             </>
           )}
         </div>
@@ -188,7 +196,6 @@ export default function EventsList() {
   const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({});
   const [userRsvps, setUserRsvps] = useState<Record<string, RsvpRecord>>({});
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
-  const isMounted = useRef(true);
 
   const loadEvents = useCallback(async () => {
     try {
@@ -206,23 +213,14 @@ export default function EventsList() {
         ]);
       }
 
-      if (!isMounted.current) return;
       setRsvpCounts(counts);
       setUserRsvps(rsvps);
       setError(null);
       setEvents(loaded);
     } catch (err) {
       console.error("Error loading events:", err);
-      if (!isMounted.current) return;
       setError(errorMessage(err, "Failed to load events"));
     }
-  }, []);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
   }, []);
 
   // Same gate as before the port: no signed-in user means the login page.
