@@ -284,7 +284,7 @@ Edit a file inside `src/components/catalyst/` directly only when a wrapper canno
 | [doc/improvements.md](doc/improvements.md)     | Improvement plan (historical roadmap)                              |
 | [doc/seo.md](doc/seo.md)                       | SEO implementation notes                                           |
 
-Some older backend documents predate PocketBase 0.34. `RBAC_SETUP.md` still shows the removed `pocketbase admin` CLI and `pb.authStore.model`; the migrations in `backend/pb_migrations/` are authoritative for collections and API rules, and #84 updates that document.
+The migrations in `backend/pb_migrations/` are authoritative for collections and API rules; `backend/MIGRATIONS.md` and `backend/RBAC_SETUP.md` mirror them.
 
 ## Contributing
 

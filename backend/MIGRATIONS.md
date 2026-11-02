@@ -67,6 +67,8 @@ migrate(
 
 ### 3. Testing Migrations
 
+`npm run test:pb` (from the project root) downloads the pinned PocketBase release, verifies its SHA-256, starts it on a free local port with a temporary data directory and `backend/pb_migrations`, and runs the RSVP rule tests (`backend/test/`). It never contacts api.cscs.dev, and CI runs it. Add a case there when you change an API rule.
+
 Migrations apply automatically on `pocketbase serve` startup, but you can manually control them:
 
 ```bash
@@ -214,9 +216,16 @@ These are the rules in the migrations:
 
 - List: `@request.auth.id != ""` (authenticated users can list)
 - View: `@request.auth.id != ""` (authenticated users can view)
-- Create: `@request.auth.id != ""` (authenticated users can create; the client sends its own user id)
-- Update: unset (no one can update an RSVP)
+- Create: `@request.auth.id != "" && @request.body.user = @request.auth.id` (a user can only create an RSVP for themselves; `1793620800_updated_rsvps_create_rule.js`)
+- Update: unset (`null`, superuser only; no user can update an RSVP)
 - Delete: `user = @request.auth.id` (users can only delete their own RSVPs)
+
+**Users** (`1764528168_updated_users.js`):
+
+- Create: `@request.body.email:isset = true && @request.body.password:isset = true && (@request.body.role:isset = false || @request.body.role = 'user')`
+- Update: `id = @request.auth.id && (@request.body.role:isset = false || @request.body.role = role)`
+
+See [RBAC_SETUP.md](RBAC_SETUP.md) for the reasoning behind each rule.
 
 ## Troubleshooting
 
