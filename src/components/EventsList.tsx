@@ -15,6 +15,7 @@ import {
 } from "../lib/pocketbase";
 import type { EventRecord, RsvpRecord } from "../lib/types";
 import { useLatestRequest } from "../lib/useLatestRequest";
+import { useRedirectToLogin } from "../lib/useRedirectToLogin";
 import { useAuth } from "../stores/authStore";
 import { BadgeButton } from "./catalyst/badge";
 import { Button } from "./catalyst/button";
@@ -201,13 +202,12 @@ export default function EventsList() {
     }
   }, [beginLoad]);
 
-  // Same gate as before the port: no signed-in user means the login page.
+  useRedirectToLogin(isLoggedIn);
+
   useEffect(() => {
-    if (!isLoggedIn) {
-      window.location.href = "/login";
-      return;
+    if (isLoggedIn) {
+      loadEvents();
     }
-    loadEvents();
   }, [isLoggedIn, loadEvents]);
 
   async function handleToggleRsvp(event: EventRecord) {

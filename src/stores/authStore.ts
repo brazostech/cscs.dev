@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
-import {
-  pb,
-  getCurrentUser,
-  onAuthChange,
-  type AuthUser,
-} from "../lib/pocketbase";
+import { pb, getCurrentUser, onAuthChange } from "../lib/pocketbase";
+import type { UserRecord } from "../lib/types";
 
 // Hook to manage authentication state
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(getCurrentUser());
+  const [user, setUser] = useState<UserRecord | null>(getCurrentUser());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

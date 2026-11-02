@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   CalendarIcon,
   CheckIcon,
@@ -6,6 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { pb } from "../lib/pocketbase";
 import type { UserRecord } from "../lib/types";
+import { useRedirectToLogin } from "../lib/useRedirectToLogin";
 import { useAuth } from "../stores/authStore";
 import { Subheading } from "./catalyst/heading";
 import { Notice, Spinner } from "./ListStates";
@@ -113,12 +114,7 @@ export default function AppDashboard() {
   const { user } = useAuth();
   const isLoggedIn = !!user;
 
-  // Same gate as before the port: no signed-in user means the login page.
-  useEffect(() => {
-    if (!isLoggedIn) {
-      window.location.href = "/login";
-    }
-  }, [isLoggedIn]);
+  useRedirectToLogin(isLoggedIn);
 
   if (!user) {
     return <Spinner label="Loading..." />;

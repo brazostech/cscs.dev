@@ -128,7 +128,7 @@ const { user, isAuthenticated, isLoading } = useAuth();
 
 ### Adding Protected Routes
 
-This is a static site, so protection is client-side only. Components check auth status using the `useAuth()` hook and redirect if needed. See `AccountDashboard.tsx` for an example.
+This is a static site, so protection is client-side only, and PocketBase's API rules are the real enforcement. Components check auth status using the `useAuth()` hook and redirect if needed. See `AccountDashboard.tsx` for an example. A page that only some roles may use wraps its content in `RequireRole` (`src/components/RequireRole.tsx`): a signed-out visitor goes to `/login`, another user sees a "You don't have permission" notice, and the matching role sees the page. It is a UX guard, not security.
 
 ### Customizing User Fields
 
