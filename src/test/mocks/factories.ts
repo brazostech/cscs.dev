@@ -3,60 +3,17 @@
  * Use these to create test data with optional overrides.
  */
 
-export interface MockEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  time_zone: string;
-  location: string;
-  location_details: string;
-  type: string;
-  tags: string;
-  series_id: string;
-  created: string;
-  updated: string;
-}
+import type {
+  BookRecord,
+  EventRecord,
+  RsvpRecord,
+  UserRecord,
+} from "../../lib/types";
 
-export interface MockUser {
-  id: string;
-  email: string;
-  name: string;
-  username: string;
-  avatar: string;
-  verified: boolean;
-  role: string;
-  created: string;
-  updated: string;
-}
-
-export interface MockRsvp {
-  id: string;
-  event: string;
-  user: string;
-  created: string;
-  updated: string;
-  expand?: {
-    event?: MockEvent;
-    user?: MockUser;
-  };
-}
-
-export interface MockBook {
-  id: string;
-  title: string;
-  author: string;
-  description: string;
-  cover_image: string;
-  status: "reading" | "completed";
-  purchase_link: string;
-  start_date: string;
-  end_date: string;
-  sort_order: number;
-  created: string;
-  updated: string;
-}
+export type MockEvent = EventRecord;
+export type MockUser = UserRecord;
+export type MockRsvp = RsvpRecord;
+export type MockBook = BookRecord;
 
 let eventCounter = 0;
 let userCounter = 0;
@@ -83,6 +40,7 @@ export function createMockEvent(overrides?: Partial<MockEvent>): MockEvent {
     type: "meetup",
     tags: "test, mock",
     series_id: "",
+    book: "",
     created: now,
     updated: now,
     ...overrides,
@@ -101,10 +59,10 @@ export function createMockUser(overrides?: Partial<MockUser>): MockUser {
     id: `user_${userCounter}_${Math.random().toString(36).substring(2, 7)}`,
     email: `testuser${userCounter}@example.com`,
     name: `Test User ${userCounter}`,
-    username: `testuser${userCounter}`,
+    emailVisibility: false,
     avatar: "",
     verified: true,
-    role: "member",
+    role: "user",
     created: now,
     updated: now,
     ...overrides,

@@ -12,13 +12,21 @@ PocketBase migrations allow you to version control your database schema and sync
 
 The easiest way to create migrations is using the Admin Dashboard with automigrate enabled:
 
-```bash
-# Start development environment
-podman-compose up
+Choose one of these, from the project root:
 
-# Navigate to Admin Dashboard
-# http://localhost:8080/_/
+```bash
+# Option A — Podman
+podman-compose up --build -d pocketbase
 ```
+
+```bash
+# Option B — local binary (macOS or Linux; installs the pinned version)
+cd backend
+make pocketbase
+./pocketbase serve --http=127.0.0.1:8080 --dir=./pb_data --migrationsDir=./pb_migrations
+```
+
+Then open the Admin Dashboard at http://localhost:8080/\_/.
 
 **Steps:**
 
@@ -34,7 +42,7 @@ podman-compose up
 - Visual interface for schema design
 - Automatic migration generation
 - No syntax errors
-- TypeScript definitions updated automatically
+- PocketBase refreshes its JSVM and editor definitions at `backend/pb_data/types.d.ts` (not the frontend record types)
 
 ### 2. Manual Migration Creation (Advanced)
 
@@ -60,6 +68,8 @@ migrate(
 
 ### 3. Testing Migrations
 
+`npm run test:pb` (from the project root) downloads the pinned PocketBase release, verifies its SHA-256, starts it on a free local port with a temporary data directory and `backend/pb_migrations`, and runs the RSVP rule tests (`backend/test/`). It never contacts api.cscs.dev, and CI runs it. Add a case there when you change an API rule.
+
 Migrations apply automatically on `pocketbase serve` startup, but you can manually control them:
 
 ```bash
@@ -69,24 +79,41 @@ Migrations apply automatically on `pocketbase serve` startup, but you can manual
 # Revert last migration
 ./pocketbase migrate down 1
 
-# View migration history
+# Remove history entries for migration files that were deleted
 ./pocketbase migrate history-sync
 ```
 
 ## Production Deployment
 
-Your production workflow is already configured:
+Backend deployment is manual — there is no CI/CD deploy step (see [ADR 0010](../doc/adr/0010-backend-deployment-via-manual-script.md)). What does happen automatically:
 
-1. **Automatic Application**: Migrations in `backend/pb_migrations/` are copied into the container via the Containerfile
-2. **Volume Persistence**: The `pb_data` volume persists the database and migration history
-3. **On Startup**: When the container starts, PocketBase automatically applies pending migrations
-4. **Backups**: Your GCE block storage undergoes scheduled backups
+1. **Image contents**: Migrations in `backend/pb_migrations/` are copied into the container image by the `Containerfile`
+2. **Directory persistence**: The `pb_data` directory on the GCE persistent disk holds the database and the applied-migration history
+3. **On startup**: When the container starts, PocketBase applies pending migrations
+4. **Backups**: The `pod-data` disk has daily snapshots at 03:00 UTC with 7-day retention. See [RUNBOOK.md](RUNBOOK.md#backups) for verification and restore.
 
-**Migration Flow:**
+**Migration flow:**
 
 ```
-Local Changes → Git Commit → GitHub → CI/CD Build → GCE VM → Container Restart → Migrations Apply
+Local change → commit and PR → merge to main → (backend/) make build-push
+  → SSH to the VM → podman pull → systemctl restart pocketbase.service
+  → migrations apply on startup
 ```
+
+The build, push and restart commands are in [backend/README.md](README.md#deployment).
+
+### Rolling back a migration in production
+
+An image rollback does not undo a migration (see [RUNBOOK.md](RUNBOOK.md#roll-back-an-image)), and the new image still contains the migration file, so a plain restart would apply it again. To undo one on the live database, run its `down` and then move to the previous image:
+
+```bash
+gcloud compute ssh cscs-dev-backend --zone=us-central1-a --project=cscsdotdev
+# On the VM. This prompts "Do you really want to revert ...? (y/N)": answer y.
+sudo podman exec -it pocketbase-pocketbase pocketbase migrate down 1 \
+  --dir=/data/pb_data --migrationsDir=/pb_migrations
+```
+
+Then pin the previous image by digest and restart the service, following [Roll back an image](RUNBOOK.md#roll-back-an-image). The same `migrate down 1` command reverts only the most recently applied migration. Take a snapshot first if the migration touched data.
 
 ## Best Practices
 
@@ -143,7 +170,9 @@ For performance or uniqueness:
 3. Add index SQL: `CREATE INDEX idx_name ON table (column)`
 4. For unique: `CREATE UNIQUE INDEX idx_name ON table (column1, column2)`
 
-## Example: Events and RSVPs Schema
+## Schema reference: events and RSVPs
+
+This mirrors the committed migrations in `backend/pb_migrations/`. Update it when a migration changes the schema.
 
 ### Events Collection
 
@@ -152,16 +181,21 @@ Collection Type: Base
 Name: events
 
 Fields:
-- title (text, required)
+- title (text)
 - description (text)
-- event_type (select: "book-club", "meetup")
-- event_date (date, required)
-- event_time (text, required)
-- time_zone (text, default: "CST")
-- location (text, required)
+- tags (text)
+- type (text — the app uses "meetup" and "book-club")
+- location (text)
 - location_details (text)
-- max_attendees (number)
+- time_zone (text)
+- date (text, YYYY-MM-DD — text so it parses in local time)
+- time (text)
+- series_id (text — groups recurring events)
+- book (relation → books, single, optional)
+- created, updated (autodate)
 ```
+
+The original unique index on `title` was removed in `1768098549_updated_events_recurring.js` so recurring events can share a name.
 
 ### RSVPs Collection
 
@@ -170,33 +204,50 @@ Collection Type: Base
 Name: rsvps
 
 Fields:
-- event (relation → events, cascade delete, single)
-- user (relation → users, cascade delete, single)
-- status (select: "attending", "maybe", "declined")
+- event (relation → events, required, single, cascade delete)
+- user (relation → users, required, single, cascade delete)
+- created, updated (autodate)
 
 Indexes:
-CREATE UNIQUE INDEX idx_event_user ON rsvps (event, user)
+CREATE UNIQUE INDEX `idx_rsvp_event_user` ON `rsvps` (`event`, `user`)
 ```
+
+There is no `status` field: the app treats the existence of an RSVP as "attending" and cancels by deleting the record.
 
 ### Collection Rules (API Access)
 
-For each collection, set appropriate rules:
+These are the rules in the migrations:
 
 **Events:**
 
-- List: `@request.auth.id != ""` (authenticated users can list)
-- View: `@request.auth.id != ""` (authenticated users can view)
-- Create: `@request.auth.id != ""` (authenticated users can create)
-- Update: `@request.auth.id != ""` (authenticated users can update)
-- Delete: `@request.auth.id != ""` (authenticated users can delete)
+- List: `""` (public)
+- View: `""` (public)
+- Create: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Update: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Delete: `@request.auth.id != "" && @request.auth.role = "moderator"`
+
+**Books** (`1774800965_created_books.js`):
+
+- List: `""` (public)
+- View: `""` (public)
+- Create: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Update: `@request.auth.id != "" && @request.auth.role = "moderator"`
+- Delete: `@request.auth.id != "" && @request.auth.role = "moderator"`
 
 **RSVPs:**
 
 - List: `@request.auth.id != ""` (authenticated users can list)
 - View: `@request.auth.id != ""` (authenticated users can view)
-- Create: `@request.auth.id != "" && @request.data.user = @request.auth.id` (users can only RSVP for themselves)
-- Update: `user = @request.auth.id` (users can only update their own RSVPs)
+- Create: `@request.auth.id != "" && @request.body.user = @request.auth.id` (a user can only create an RSVP for themselves; `1793620800_updated_rsvps_create_rule.js`)
+- Update: unset (`null`, superuser only; no user can update an RSVP)
 - Delete: `user = @request.auth.id` (users can only delete their own RSVPs)
+
+**Users** (`1764528168_updated_users.js`):
+
+- Create: `@request.body.email:isset = true && @request.body.password:isset = true && (@request.body.role:isset = false || @request.body.role = 'user')`
+- Update: `id = @request.auth.id && (@request.body.role:isset = false || @request.body.role = role)`
+
+See [RBAC_SETUP.md](RBAC_SETUP.md) for the reasoning behind each rule.
 
 ## Troubleshooting
 
@@ -221,6 +272,8 @@ For each collection, set appropriate rules:
 
 ### Testing locally before production
 
+From the project root:
+
 ```bash
 # 1. Backup your local database
 cp backend/pb_data/data.db backend/pb_data/data.db.backup
@@ -234,20 +287,11 @@ podman-compose restart pocketbase
 cp backend/pb_data/data.db.backup backend/pb_data/data.db
 ```
 
-## TypeScript Integration
+## TypeScript Types
 
-PocketBase generates TypeScript definitions automatically:
+PocketBase writes editor definitions to `backend/pb_data/types.d.ts`, and the migration files reference that path in a `/// <reference path="..." />` comment for editor support. `pb_data/` is gitignored: the file is generated locally, absent from a fresh clone, and never committed.
 
-- Location: `backend/pb_data/types.d.ts`
-- Updated when collections change
-- Use these types in your frontend code:
-
-```typescript
-import type { EventsResponse, RsvpsResponse } from "../backend/pb_data/types";
-
-// Type-safe record access
-const event: EventsResponse = await pb.collection("events").getOne("RECORD_ID");
-```
+Do not import from `pb_data/`. The app declares its PocketBase types by hand in `src/lib/types.ts` (`UserRecord`, `EventRecord`, `RsvpRecord`, `BookRecord`); update those interfaces when a schema change affects them.
 
 ## Resources
 

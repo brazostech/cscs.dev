@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import RequireRole from "./RequireRole";
 import BookForm from "./BookForm";
 
-export default function BookFormWrapper() {
+function BookFormWrapperBody() {
   const [bookId, setBookId] = useState<string | undefined>(undefined);
   const [isReady, setIsReady] = useState(false);
 
@@ -41,5 +42,19 @@ export default function BookFormWrapper() {
         <BookForm bookId={bookId} />
       </div>
     </div>
+  );
+}
+
+/**
+ * The `/app/create-book` page: the form, for moderators only. The guard is
+ * inside this component, not wrapped around it in the `.astro` page, so the
+ * form is an ordinary React child that unmounts with the guard (a second
+ * `client:only` island would keep running after the guard hid it).
+ */
+export default function BookFormWrapper() {
+  return (
+    <RequireRole requiredRole="moderator">
+      <BookFormWrapperBody />
+    </RequireRole>
   );
 }

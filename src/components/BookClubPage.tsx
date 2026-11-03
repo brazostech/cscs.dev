@@ -3,16 +3,16 @@ import {
   getCurrentBook,
   getCompletedBooks,
   getBookCoverUrl,
-  type BookData,
 } from "../lib/pocketbase";
+import type { BookRecord } from "../lib/types";
 import { useAuth } from "../stores/authStore";
 
 export default function BookClubPage() {
   const { user } = useAuth();
   const isModerator = user?.role === "moderator";
 
-  const [currentBook, setCurrentBook] = useState<BookData | null>(null);
-  const [completedBooks, setCompletedBooks] = useState<BookData[]>([]);
+  const [currentBook, setCurrentBook] = useState<BookRecord | null>(null);
+  const [completedBooks, setCompletedBooks] = useState<BookRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

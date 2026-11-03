@@ -9,6 +9,7 @@ const description = "Create or edit a book";
 
 <Layout title={title} description={description}>
   <AppLayout client:only="react" currentPath="/app/books">
+    {/* Moderator-only: BookFormWrapper guards itself with RequireRole. */}
     <BookFormWrapper client:only="react" />
   </AppLayout>
 </Layout>

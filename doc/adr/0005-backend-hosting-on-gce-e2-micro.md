@@ -26,3 +26,8 @@ SSH access is configured through VM metadata with the user `jackvincenthall` and
 - There is no auto-scaling or load balancing. If the VM goes down, the backend is unavailable until manually restarted.
 - The startup script (`backend/startup.sh`) is the authoritative infrastructure definition — it configures everything from swap to container runtime to the PocketBase service.
 - Firewall rules allow inbound traffic on ports 80 and 443 from all sources (`0.0.0.0/0`) to instances tagged `https-server`.
+
+## Amendment (2026-11-02, #83)
+
+- SSH access is via `gcloud compute ssh`, which uses the local user's name and adds the key to the instance metadata as needed. The user `jackvincenthall` named above applies only to the existing VM's keys.
+- `backend/deploy.sh` now takes the provisioning SSH identity from `CSCS_SSH_USER` (default: the local user from `whoami`) and `CSCS_SSH_PUBLIC_KEY` (default `~/.ssh/id_rsa.pub`) instead of hardcoding it. The existing VM's keys are untouched, because `deploy.sh` only writes `ssh-keys` metadata when it creates a VM.

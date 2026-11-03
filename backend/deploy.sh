@@ -7,14 +7,18 @@ REGION="us-central1"
 PROJECT="cscsdotdev"
 ADDRESS_NAME="cscs-backend-ip"
 DISK_NAME="pod-data"
-USERNAME="jackvincenthall"
-SSH_PUBLIC_KEY_PATH="$HOME/.ssh/id_rsa.pub"
+# SSH identity used when provisioning a new VM. Override either value when
+# your account name or key path differs, for example:
+#   CSCS_SSH_USER=jack CSCS_SSH_PUBLIC_KEY=~/.ssh/id_ed25519.pub ./deploy.sh up
+USERNAME="${CSCS_SSH_USER:-$(whoami)}"
+SSH_PUBLIC_KEY_PATH="${CSCS_SSH_PUBLIC_KEY:-$HOME/.ssh/id_rsa.pub}"
 
 # --- HELPER FUNCTIONS ---
 
 check_ssh_key() {
     if [ ! -f "$SSH_PUBLIC_KEY_PATH" ]; then
         echo "❌ SSH public key file not found at: $SSH_PUBLIC_KEY_PATH"
+        echo "   Set CSCS_SSH_PUBLIC_KEY to the public key you want on the VM."
         exit 1
     fi
 }

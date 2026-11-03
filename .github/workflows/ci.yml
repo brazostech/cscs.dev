@@ -18,16 +18,32 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+          check-latest: true
           cache: "npm"
+
+      - name: Check Node satisfies engines.node
+        # Inline node because this runs before `npm ci`, so `semver` is not installed.
+        run: |
+          node -e '
+            const range = require("./package.json").engines.node;
+            const m = /^>=(\d+)\.(\d+)\.(\d+)$/.exec(range);
+            if (!m) { console.error(`Unsupported engines.node range "${range}": update this step`); process.exit(2); }
+            const min = m.slice(1).map(Number);
+            const got = process.versions.node.split(".").map(Number);
+            const ok = [0, 1, 2].reduce((r, i) => r || Math.sign(got[i] - min[i]), 0) >= 0;
+            if (!ok) { console.error(`Node ${process.versions.node} does not satisfy engines.node ${range}; the runner cache is stale or the Node release manifest is older than the floor`); process.exit(1); }
+            console.log(`Node ${process.versions.node} satisfies engines.node ${range}`);
+          '
 
       - name: Check Node pins match .nvmrc
         run: |
@@ -36,6 +52,19 @@ jobs:
             || { echo "Containerfile base image does not match .nvmrc (${node_major})"; exit 1; }
           grep -qE "^[[:space:]]*NODE_VERSION[[:space:]]*=[[:space:]]*\"${node_major}\"[[:space:]]*$" netlify.toml \
             || { echo "netlify.toml NODE_VERSION does not match .nvmrc (${node_major})"; exit 1; }
+
+      - name: Check PocketBase pins match the Containerfile
+        run: |
+          pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
+          [ -n "$pb" ] \
+            || { echo "ARG POCKETBASE_VERSION not found in backend/Containerfile"; exit 1; }
+          grep -Fxq "export const PB_VERSION = \"${pb}\";" backend/scripts/pocketbase-download.mjs \
+            || { echo "PB_VERSION in backend/scripts/pocketbase-download.mjs does not match Containerfile (${pb})"; exit 1; }
+          grep -Eq "^[[:space:]]*POCKETBASE_VERSION:[[:space:]]*\"?${pb//./\\.}\"?[[:space:]]*$" podman-compose.yaml \
+            || { echo "POCKETBASE_VERSION in podman-compose.yaml does not match Containerfile (${pb})"; exit 1; }
+
+      - name: Test agent hooks
+        run: scripts/test-agent-hooks.sh
 
       - name: Install dependencies
         run: npm ci
@@ -51,6 +80,27 @@ jobs:
 
       - name: Run tests
         run: npm run test:run
+
+      - name: Cache PocketBase download
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/pocketbase
+          key: pocketbase-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/scripts/pocketbase-download.mjs') }}
+
+      - name: Run PocketBase API rule tests
+        run: npm run test:pb
+
+      - name: Install PocketBase with make
+        run: |
+          out="$(make --no-print-directory -C backend pocketbase)"
+          echo "$out"
+          case "$out" in Installed*) ;; *) echo "first run should install"; exit 1;; esac
+          out="$(make --no-print-directory -C backend pocketbase)"
+          echo "$out"
+          case "$out" in *"already installed"*) ;; *) echo "second run should be a no-op"; exit 1;; esac
+          pb="$(sed -n 's/^ARG POCKETBASE_VERSION=//p' backend/Containerfile)"
+          [ "$(backend/pocketbase --version)" = "pocketbase version ${pb}" ] \
+            || { echo "backend/pocketbase does not report ${pb}"; exit 1; }
 
       - name: Run build
         run: npm run build
