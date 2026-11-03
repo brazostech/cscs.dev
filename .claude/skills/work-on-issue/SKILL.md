@@ -135,7 +135,7 @@ The repo's hook denies the `gh` subcommands for pull requests, issues and search
 
 The GitHub Actions `build` job is a check run. `get_status` returns only legacy commit statuses (here, the Netlify deploy preview), so take the Actions result from `gh run watch --exit-status` and its logs from `gh run view`.
 
-1. Find the workflow run for the pushed commit. If the list is empty or its `headSha` differs from `git rev-parse HEAD`, wait a few seconds and list again. A run with conclusion `cancelled` for an older commit was superseded by the concurrency group, so ignore it and look for the run for the current commit:
+1. Find the workflow run for the pushed commit. If the list is empty or its `headSha` differs from `git rev-parse HEAD`, wait a few seconds and list again, for up to 2 minutes; if no run for the current commit appears by then, stop and report to the user. A run with conclusion `cancelled` for an older commit was superseded by the concurrency group, so ignore it and look for the run for the current commit:
 
    ```bash
    gh run list --repo brazostech/cscs.dev --branch "$(git branch --show-current)" --limit 1 --json databaseId,status,conclusion,headSha
