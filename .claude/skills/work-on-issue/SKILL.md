@@ -89,7 +89,7 @@ If build or lint fails, fix the errors and re-run from the failing step. Do not 
 
 Closes #$ARGUMENTS
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 
 Use the appropriate type: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
@@ -133,25 +133,31 @@ After the PR is created, wait for CI to complete and fix any failures.
 
 The repo's hook denies the `gh` subcommands for pull requests, issues and search, so read PR status through the GitHub MCP server. The `gh` subcommands for workflow runs are not blocked, so use them to wait.
 
+The GitHub Actions `build` job is a check run. `get_status` returns only legacy commit statuses (here, the Netlify deploy preview), so take the Actions result from `gh run watch --exit-status` and its logs from `gh run view`.
+
 1. Find the workflow run for the pushed commit. If the list is empty or its `headSha` differs from `git rev-parse HEAD`, wait a few seconds and list again. A run with conclusion `cancelled` for an older commit was superseded by the concurrency group, so ignore it and look for the run for the current commit:
 
    ```bash
    gh run list --repo brazostech/cscs.dev --branch "$(git branch --show-current)" --limit 1 --json databaseId,status,conclusion,headSha
    ```
 
-2. Wait for that run to finish:
+   If the run for the current commit itself ends `cancelled`, re-run it once with `gh run rerun <run-id> --repo brazostech/cscs.dev`, then watch the new run. If it is cancelled again, report it to the user.
+
+2. Wait for that run to finish. A run can outlast the Bash tool's timeout, so run the command with the longest timeout available, or in the background:
 
    ```bash
    gh run watch <run-id> --repo brazostech/cscs.dev --exit-status
    ```
 
-3. Read the status of every check, including external ones such as the Netlify deploy preview that `gh run` does not show: call `mcp__github__pull_request_read` with method `get_status`, owner `brazostech`, repo `cscs.dev`, pullNumber `<PR-number>`. If a check is still pending, wait a minute and call it again.
+   If the command times out before the run ends, list the run again and watch it again, or poll its state with `gh run view <run-id> --repo brazostech/cscs.dev --json status,conclusion`.
+
+3. Read the external statuses, such as the Netlify deploy preview, which `gh run` does not show: call `mcp__github__pull_request_read` with method `get_status`, owner `brazostech`, repo `cscs.dev`, pullNumber `<PR-number>`. For check-run details, call the same tool with method `get_check_runs`. If a status is still pending, wait a minute and call it again, for at most 10 minutes. After that, report the pending status to the user instead of waiting longer.
 
 4. **If all checks pass** → proceed to Step 10.
 
 5. **If any check fails** (max 3 fix attempts):
-   a. Identify the failing check from the `get_status` result.
-   b. For a GitHub Actions failure, get the logs:
+   a. Identify the failure: a failed `gh run watch` is the Actions `build` job; a failed or errored status from `get_status` is an external check such as Netlify.
+   b. For an Actions failure, get the logs:
 
    ```bash
    gh run view <run-id> --repo brazostech/cscs.dev --log-failed
@@ -170,7 +176,7 @@ The repo's hook denies the `gh` subcommands for pull requests, issues and search
 
 Ask the user: "Should I close issue #$ARGUMENTS now, or let the PR merge close it automatically?"
 
-- If close now → `mcp__github__issue_write` with method `update`, state `closed`, state_reason `completed`
+- If close now → `mcp__github__issue_write` with method `update`, owner `brazostech`, repo `cscs.dev`, issue_number `$ARGUMENTS`, state `closed`, state_reason `completed`
 - If let PR close it → confirm the `Closes #$ARGUMENTS` reference is in the PR body (it is from Step 8)
 
 ---

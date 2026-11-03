@@ -27,6 +27,8 @@ Hooks run before tool execution. Defined in `settings.json`, scripts in `hooks/`
 
 Skill definitions live in `skills/<name>/SKILL.md`.
 
+`work-on-issue` calls GitHub through an MCP server registered as `github` (tools are named `mcp__github__*`). The repo does not commit an `.mcp.json`, so register the server yourself, per user, for example with `claude mcp add` at user or local scope, under the name `github`. Without it the skill cannot run end to end.
+
 Every shell command a skill tells an agent to run must pass the hooks. `scripts/test-agent-hooks.sh` extracts the commands from `work-on-issue/SKILL.md`, feeds each through `prefer-github-mcp.sh`, and fails on any deny. CI runs it. GitHub reads and writes go through the GitHub MCP tools; the skill waits on CI with `gh run list` and `gh run watch`, which the hook does not block.
 
 ## Worktrees
