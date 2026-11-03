@@ -9,6 +9,7 @@ const description = "Create or edit an event";
 
 <Layout title={title} description={description}>
   <AppLayout client:only="react" currentPath="/app/events">
+    {/* Moderator-only: EventFormWrapper guards itself with RequireRole. */}
     <EventFormWrapper client:only="react" />
   </AppLayout>
 </Layout>

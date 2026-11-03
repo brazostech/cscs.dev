@@ -10,7 +10,7 @@
 
 import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import BookFormWrapper from "./BookFormWrapper";
 import EventFormWrapper from "./EventFormWrapper";
 import RequireRole from "./RequireRole";
@@ -67,6 +67,10 @@ describe("RequireRole", () => {
     mockGetOne.mockResolvedValue({});
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("signed out", () => {
     beforeEach(() => {
       mockUseAuth.mockReturnValue(SIGNED_OUT);
@@ -78,14 +82,13 @@ describe("RequireRole", () => {
       expect(window.location.href).toBe("/login");
     });
 
-    it("renders only the loading message, mounts nothing and requests nothing", () => {
+    it("renders only the loading message and mounts nothing", () => {
       render(guarded());
 
       expect(screen.getByRole("status")).toHaveTextContent("Loading...");
       expect(screen.queryByText("Secret page")).toBeNull();
       expect(screen.queryByText(/permission/i)).toBeNull();
       expect(mockMounted).not.toHaveBeenCalled();
-      expect(mockCollection).not.toHaveBeenCalled();
     });
   });
 

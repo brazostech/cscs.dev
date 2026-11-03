@@ -59,7 +59,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 
 - try/catch with `err instanceof Error ? err.message : "fallback"` pattern. Pages that load data use `errorMessage()` from `src/components/ListStates.tsx` for it.
 - Loading state with disabled submit buttons during async operations
-- Pages that load data or show an empty or error state share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty and error states, which also takes `children` such as a link, and `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
+- Pages that load data or show an empty or error state share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty, error and no-permission states, which also takes `children` such as a link, and `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
 
 ## Architecture
 
@@ -71,7 +71,7 @@ src/
   layouts/            # Astro layouts (Layout.astro accepts title, description)
   lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts); shared hooks (useLatestRequest.ts, useRedirectToLogin.ts)
   pages/              # File-based routing
-    app/              # Authenticated pages (dashboard, events, books)
+    app/              # Authenticated pages (dashboard, events, books, create-event, create-book)
   stores/             # React state (authStore.ts → useAuth() hook)
   test/               # Mocks and factories
 ```
