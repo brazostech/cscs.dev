@@ -55,8 +55,8 @@
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.61.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "@vitest/browser-playwright": "^4.0.14",
-    "@vitest/coverage-v8": "^4.1.1",
+    "@vitest/browser-playwright": "^5.0.5",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "eslint-plugin-astro": "^3.2.1",
     "eslint-plugin-jsx-a11y-x": "^0.2.0",
@@ -70,6 +70,6 @@
     "storybook": "^10.3.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.61.0",
-    "vitest": "^4.1.1"
+    "vitest": "^5.0.5"
   }
 }
