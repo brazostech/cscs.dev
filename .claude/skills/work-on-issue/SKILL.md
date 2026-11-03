@@ -9,8 +9,8 @@ argument-hint: "[issue-number]"
 
 Complete workflow to take a GitHub issue from triage to pull request.
 
-**Repository**: `The-Read-Onlys/cscs.dev`
-**Issue number**: `$ARGUMENTS` (required — abort with a clear message if empty)
+**Repository**: `brazostech/cscs.dev` (owner `brazostech`, repo `cscs.dev`). Use these literal values in every GitHub call below.
+**Issue number**: `$ARGUMENTS` (required, a bare issue number such as `88` — abort with a clear message if empty)
 
 ---
 
@@ -18,7 +18,7 @@ Complete workflow to take a GitHub issue from triage to pull request.
 
 Gather all issue details in parallel:
 
-- `mcp__github__issue_read` with method `get`, owner `The-Read-Onlys`, repo `cscs.dev`, issue_number `$ARGUMENTS`
+- `mcp__github__issue_read` with method `get`, owner `brazostech`, repo `cscs.dev`, issue_number `$ARGUMENTS`
 - `mcp__github__issue_read` with method `get_comments`, same owner/repo/issue_number
 - `mcp__github__issue_read` with method `get_labels`, same owner/repo/issue_number
 
@@ -82,14 +82,14 @@ If build or lint fails, fix the errors and re-run from the failing step. Do not 
 2. Stage **specific files** (never `git add -A`)
 3. Create a commit with a conventional commit message:
 
-```
+```text
 <type>: <short description>
 
 <body explaining what and why>
 
 Closes #$ARGUMENTS
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 
 Use the appropriate type: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
@@ -100,7 +100,7 @@ Use the appropriate type: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `c
 
 1. Push the branch: `git push -u origin HEAD`
 2. Create the PR using `mcp__github__create_pull_request`:
-   - owner: `The-Read-Onlys`
+   - owner: `brazostech`
    - repo: `cscs.dev`
    - title: Short description (under 70 chars)
    - head: current branch name
@@ -129,35 +129,46 @@ Generated with [Claude Code](https://claude.com/claude-code)
 
 ## Step 9 — Monitor CI
 
-After the PR is created, wait for CI checks to complete and fix any failures.
+After the PR is created, wait for CI to complete and fix any failures.
 
-1. Watch for CI completion:
+The repo's hook denies the `gh` subcommands for pull requests, issues and search, so read PR status through the GitHub MCP server. The `gh` subcommands for workflow runs are not blocked, so use them to wait.
 
-   ```
-   gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --watch
-   ```
+The GitHub Actions `build` job is a check run. `get_status` returns only legacy commit statuses (here, the Netlify deploy preview), so take the Actions result from `gh run watch --exit-status` and its logs from `gh run view`.
 
-2. **If all checks pass** → proceed to Step 10.
+1. Find the workflow run for the pushed commit. If the list is empty or its `headSha` differs from `git rev-parse HEAD`, wait a few seconds and list again, for up to 2 minutes; if no run for the current commit appears by then, stop and report to the user. A run with conclusion `cancelled` for an older commit was superseded by the concurrency group, so ignore it and look for the run for the current commit:
 
-3. **If any check fails** (max 3 fix attempts):
-   a. Identify failures:
-
-   ```
-   gh pr checks <PR-number> --repo The-Read-Onlys/cscs.dev --json name,state,bucket
+   ```bash
+   gh run list --repo brazostech/cscs.dev --branch "$(git branch --show-current)" --limit 1 --json databaseId,status,conclusion,headSha
    ```
 
-   b. Get failure logs:
+   If the run for the current commit itself ends `cancelled`, re-run it once with `gh run rerun <run-id> --repo brazostech/cscs.dev`, then watch the new run. If it is cancelled again, report it to the user.
 
+2. Wait for that run to finish. A run can outlast the Bash tool's timeout, so run the command with the longest timeout available, or in the background:
+
+   ```bash
+   gh run watch <run-id> --repo brazostech/cscs.dev --exit-status
    ```
-   gh run view <run-id> --repo The-Read-Onlys/cscs.dev --log-failed
+
+   If the command times out before the run ends, list the run again and watch it again, or poll its state with `gh run view <run-id> --repo brazostech/cscs.dev --json status,conclusion`.
+
+3. Read the external statuses, such as the Netlify deploy preview, which `gh run` does not show: call `mcp__github__pull_request_read` with method `get_status`, owner `brazostech`, repo `cscs.dev`, pullNumber `<PR-number>`. For check-run details, call the same tool with method `get_check_runs`. If a status is still pending, wait a minute and call it again, for at most 10 minutes. After that, report the pending status to the user instead of waiting longer.
+
+4. **If all checks pass** → proceed to Step 10.
+
+5. **If any check fails** (max 3 fix attempts):
+   a. Identify the failure: a failed `gh run watch` is the Actions `build` job; a failed or errored status from `get_status` is an external check such as Netlify.
+   b. For an Actions failure, get the logs:
+
+   ```bash
+   gh run view <run-id> --repo brazostech/cscs.dev --log-failed
    ```
 
    c. Fix the failures in the worktree.
    d. Re-run Step 6 (Verify) locally to confirm the fix.
    e. Stage specific files, commit with a message like `fix: resolve CI failure in <check-name>`, and push.
-   f. Loop back to watch CI again (step 9.1).
+   f. Loop back to find the new run (step 9.1) and watch it.
 
-4. **If still failing after 3 attempts** → tell the user, provide the PR URL and failing check details, and proceed to Step 10.
+6. **If still failing after 3 attempts** → tell the user, provide the PR URL and failing check details, and proceed to Step 10.
 
 ---
 
@@ -165,7 +176,7 @@ After the PR is created, wait for CI checks to complete and fix any failures.
 
 Ask the user: "Should I close issue #$ARGUMENTS now, or let the PR merge close it automatically?"
 
-- If close now → `mcp__github__issue_write` with method `update`, state `closed`, state_reason `completed`
+- If close now → `mcp__github__issue_write` with method `update`, owner `brazostech`, repo `cscs.dev`, issue_number `$ARGUMENTS`, state `closed`, state_reason `completed`
 - If let PR close it → confirm the `Closes #$ARGUMENTS` reference is in the PR body (it is from Step 8)
 
 ---

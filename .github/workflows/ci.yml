@@ -63,6 +63,9 @@ jobs:
           grep -Eq "^[[:space:]]*POCKETBASE_VERSION:[[:space:]]*\"?${pb//./\\.}\"?[[:space:]]*$" podman-compose.yaml \
             || { echo "POCKETBASE_VERSION in podman-compose.yaml does not match Containerfile (${pb})"; exit 1; }
 
+      - name: Test agent hooks
+        run: scripts/test-agent-hooks.sh
+
       - name: Install dependencies
         run: npm ci
 

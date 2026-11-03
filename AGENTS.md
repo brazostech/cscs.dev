@@ -6,7 +6,7 @@ Instructions for AI coding agents. `CLAUDE.md` is a symlink to this file.
 
 - **Project**: CSCS community website — Astro 7 + React 19, Tailwind CSS v4, PocketBase backend, Catalyst UI Kit
 - **Worktree required**: All implementation work must happen in a git worktree. Use `EnterWorktree` before editing project files. A hook enforces this.
-- **GitHub MCP tools**: Use MCP tools (not `gh` CLI) for PRs, issues, etc. A hook redirects `gh` commands.
+- **GitHub MCP tools**: Use MCP tools (not `gh` CLI) for PRs, issues, etc. A hook redirects `gh pr`, `gh issue` and `gh search`. `gh run list`, `gh run watch` and `gh run view` are allowed for waiting on CI and reading logs.
 - **Package manager**: npm only (yarn/pnpm/bun are denied by settings)
 
 ## Commands
@@ -23,6 +23,7 @@ npm run test:run     # Vitest (single run)
 npm run test:pb      # PocketBase API rule tests (downloads PocketBase v0.34.0)
 npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
+scripts/test-agent-hooks.sh # Checks the work-on-issue skill's commands pass the .claude hooks (needs jq)
 make -C backend pocketbase # Install the pinned PocketBase at backend/pocketbase (gitignored, not committed)
 ```
 
@@ -139,7 +140,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
 - **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. `main` takes changes only through PRs (ruleset, ADR 0012).
 - **Merging**: squash only. The PR title becomes the commit subject on `main`, so it must be a Conventional Commit; the body becomes the commit message. Branches delete on merge.
-- **CI**: PRs run lint, format check, typecheck, tests, PocketBase API rule tests (`npm run test:pb`), build, Storybook build via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
+- **CI**: PRs run lint, format check, typecheck, tests, PocketBase API rule tests (`npm run test:pb`), build, Storybook build, and the agent hook test via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
 
 ## Boundaries
 
@@ -158,7 +159,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
 - **Feature roadmap**: `doc/improvements.md`
-- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, PocketBase API rule tests, build, Storybook build)
+- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, PocketBase API rule tests, build, Storybook build, agent hook test)
 - **Hook & skill docs**: `.claude/README.md`
 
 ## Worktree Workflow
