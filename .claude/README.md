@@ -21,11 +21,13 @@ Hooks run before tool execution. Defined in `settings.json`, scripts in `hooks/`
 
 ## Skills
 
-| Skill           | Invocation                          | Purpose                                                                       |
-| --------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
-| `work-on-issue` | `/work-on-issue <github-issue-url>` | Full issue lifecycle: triage → worktree → plan mode → implement → verify → PR |
+| Skill           | Invocation                      | Purpose                                                                       |
+| --------------- | ------------------------------- | ----------------------------------------------------------------------------- |
+| `work-on-issue` | `/work-on-issue <issue-number>` | Full issue lifecycle: triage → worktree → plan mode → implement → verify → PR |
 
 Skill definitions live in `skills/<name>/SKILL.md`.
+
+Every shell command a skill tells an agent to run must pass the hooks. `scripts/test-agent-hooks.sh` extracts the commands from `work-on-issue/SKILL.md`, feeds each through `prefer-github-mcp.sh`, and fails on any deny. CI runs it. GitHub reads and writes go through the GitHub MCP tools; the skill waits on CI with `gh run list` and `gh run watch`, which the hook does not block.
 
 ## Worktrees
 

@@ -65,3 +65,7 @@ Netlify watches the same repository and deploys independently when it detects a 
 - `check-latest` fails open: if setup-node cannot fetch the Node release manifest, it keeps the cached Node. The engines step then fails the job when that Node is too old, and the job needs a re-run.
 - The `Containerfile` and `netlify.toml` still state only the major version and float on `22`, as the #81 amendment notes.
 - Cost: when the cache is stale, setup-node downloads Node, which adds seconds to the run.
+
+## Amendment (2026-11-02, #88)
+
+- The `build` job ends with a `Test agent hooks` step that runs `scripts/test-agent-hooks.sh`. It extracts the shell commands in `.claude/skills/work-on-issue/SKILL.md` and fails if `.claude/hooks/prefer-github-mcp.sh` denies any of them. It needs `jq`, which ubuntu-latest provides. `permissions` is unchanged.

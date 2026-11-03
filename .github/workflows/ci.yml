@@ -104,3 +104,6 @@ jobs:
 
       - name: Build Storybook
         run: npm run build-storybook
+
+      - name: Test agent hooks
+        run: scripts/test-agent-hooks.sh
