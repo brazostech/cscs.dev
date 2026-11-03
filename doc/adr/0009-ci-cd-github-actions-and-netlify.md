@@ -68,4 +68,4 @@ Netlify watches the same repository and deploys independently when it detects a 
 
 ## Amendment (2026-11-02, #88)
 
-- The `build` job ends with a `Test agent hooks` step that runs `scripts/test-agent-hooks.sh`. It extracts the shell commands in `.claude/skills/work-on-issue/SKILL.md` and fails if `.claude/hooks/prefer-github-mcp.sh` denies any of them. It needs `jq`, which ubuntu-latest provides. `permissions` is unchanged.
+- The `build` job runs a `Test agent hooks` step, before `npm ci`, that runs `scripts/test-agent-hooks.sh`. It extracts the shell commands in `.claude/skills/work-on-issue/SKILL.md` and fails if `.claude/hooks/prefer-github-mcp.sh` denies any of them. It needs `jq`, which ubuntu-latest provides. `permissions` is unchanged.

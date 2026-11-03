@@ -22,7 +22,10 @@ command -v jq >/dev/null || { echo "jq is required" >&2; exit 2; }
 # Prints the hook's decision for a command: "deny", "ask", "allow", ...
 decision() {
   local out
-  out=$(jq -n --arg c "$1" '{tool_name: "Bash", tool_input: {command: $c}}' | "$HOOK")
+  if ! out=$(jq -n --arg c "$1" '{tool_name: "Bash", tool_input: {command: $c}}' | "$HOOK"); then
+    echo "error" # the hook crashed: report it as a failed check, not a silent abort
+    return 0
+  fi
   # The hook prints nothing when it has no objection.
   if [ -z "$out" ]; then
     echo allow
@@ -96,7 +99,9 @@ while IFS= read -r line; do
   while [[ $rest =~ $inline_re ]]; do
     matched="${BASH_REMATCH[0]}"
     span="${BASH_REMATCH[1]}"
-    if [[ $span =~ $cmd_re ]]; then
+    before="${rest%%"$matched"*}"
+    # A span after "never" names a prohibited command, not an instruction.
+    if [[ $span =~ $cmd_re ]] && [[ $before != *[Nn]ever\  ]]; then
       commands+=("$span")
     fi
     rest="${rest#*"$matched"}"

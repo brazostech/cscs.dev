@@ -131,9 +131,9 @@ Generated with [Claude Code](https://claude.com/claude-code)
 
 After the PR is created, wait for CI to complete and fix any failures.
 
-The repo's hook denies the `gh` subcommands for pull requests, issues and search, so read PR status through the GitHub MCP server. The `gh run` subcommands are not blocked, so use them to wait.
+The repo's hook denies the `gh` subcommands for pull requests, issues and search, so read PR status through the GitHub MCP server. The `gh` subcommands for workflow runs are not blocked, so use them to wait.
 
-1. Find the workflow run for the pushed commit. If the list is empty or its `headSha` differs from `git rev-parse HEAD`, wait a few seconds and list again:
+1. Find the workflow run for the pushed commit. If the list is empty or its `headSha` differs from `git rev-parse HEAD`, wait a few seconds and list again. A run with conclusion `cancelled` for an older commit was superseded by the concurrency group, so ignore it and look for the run for the current commit:
 
    ```bash
    gh run list --repo brazostech/cscs.dev --branch "$(git branch --show-current)" --limit 1 --json databaseId,status,conclusion,headSha
