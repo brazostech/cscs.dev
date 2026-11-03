@@ -45,8 +45,8 @@ Access the PocketBase admin UI at `http://localhost:8080/_/`
 
 If you're running PocketBase locally outside of containers:
 
-1. Download PocketBase from [https://pocketbase.io/](https://pocketbase.io/)
-2. Start PocketBase: `./pocketbase serve --http=0.0.0.0:8080`
+1. Install the pinned PocketBase: `cd backend && make pocketbase` (writes `backend/pocketbase`, gitignored)
+2. Start PocketBase from `backend/`: `./pocketbase serve --http=0.0.0.0:8080`
 3. Create a `.env` file to set the URL:
 
 ```bash
@@ -74,12 +74,15 @@ The admin UI will be available at `http://localhost:8080/_/`
 - `/login` - User login page
 - `/register` - User registration page
 - `/account` - Protected account dashboard (requires authentication)
+- `/app/create-event`, `/app/create-book` - Moderator-only forms (`?edit=<id>` edits), guarded by `RequireRole`
 
 ### Components
 
 - `LoginForm.tsx` - Login form with email/password
 - `RegisterForm.tsx` - Registration form with email/password/name
 - `AccountDashboard.tsx` - User profile and logout
+- `RequireRole.tsx` - Guard for pages that only some roles may use
+- `src/lib/useRedirectToLogin.ts` - Hook that sends a signed-out visitor to `/login`
 
 ### Authentication Flow
 
@@ -96,8 +99,9 @@ The admin UI will be available at `http://localhost:8080/_/`
    - Redirects to `/account`
 
 3. **Protected Routes**: Client-side checks
-   - Components like `AccountDashboard` check auth status
+   - Pages use `RequireRole` (role-gated) or `useRedirectToLogin` (any signed-in user); `AccountDashboard` predates them and checks auth itself
    - Unauthenticated users redirected to `/login` in-browser
+   - A signed-in user without the required role sees a permission notice
    - Auth state persists via localStorage
 
 4. **Logout**: User signs out from `/account`
@@ -128,7 +132,7 @@ const { user, isAuthenticated, isLoading } = useAuth();
 
 ### Adding Protected Routes
 
-This is a static site, so protection is client-side only. Components check auth status using the `useAuth()` hook and redirect if needed. See `AccountDashboard.tsx` for an example.
+This is a static site, so protection is client-side only, and PocketBase's API rules are the real enforcement. Components check auth status using the `useAuth()` hook and redirect if needed. New pages use `RequireRole` (`src/components/RequireRole.tsx`) or `useRedirectToLogin` (`src/lib/useRedirectToLogin.ts`); `AccountDashboard.tsx` is the legacy pattern, with its own `isLoading` branch, and is not the example to copy. A page that only some roles may use wraps its content in `RequireRole`, inside its React component (see `EventFormWrapper.tsx`): a signed-out visitor goes to `/login`, another user sees a "You don't have permission" notice, and the matching role sees the page. It is a UX guard, not security.
 
 ### Customizing User Fields
 
@@ -137,7 +141,7 @@ You can extend the user collection in PocketBase to add custom fields:
 1. Go to PocketBase admin UI
 2. Navigate to Collections > users
 3. Add custom fields as needed
-4. Update `AuthUser` interface in `src/lib/pocketbase.ts`
+4. Update the `UserRecord` interface in `src/lib/types.ts`
 
 ### Email Verification
 
@@ -205,14 +209,9 @@ Email verification requires SMTP configuration:
 
 ### Development
 
-Email verification is configured in development with SendGrid SMTP. To test:
+SendGrid SMTP is configured in production only. Local development has no SMTP, so no verification email is sent and new accounts stay unverified. That does not block sign-in or moderator actions.
 
-1. Set **App URL** in Admin Dashboard: http://localhost:8080 (or http://localhost:4321)
-2. Register with a real email address
-3. Check your email for the verification link
-4. Click the link to verify
-
-Alternatively, you can manually verify users via Admin Dashboard (Collections → users → Edit user → check "verified")
+To test the production flow, use the production settings and a real email address. To unblock a local user instead, verify them manually in the Admin Dashboard (Collections → users → Edit user → check "verified").
 
 ## Troubleshooting
 

@@ -12,16 +12,14 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import EventForm, {
-  generateRecurringDates,
-  generateSeriesId,
-} from "./EventForm";
+import EventForm from "./EventForm";
 import { createMockEvent } from "../test/mocks";
 
 // Mock the pocketbase module
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockGetOne = vi.fn();
+const mockDelete = vi.fn();
 
 vi.mock("../lib/pocketbase", () => ({
   pb: {
@@ -29,6 +27,7 @@ vi.mock("../lib/pocketbase", () => ({
       create: mockCreate,
       update: mockUpdate,
       getOne: mockGetOne,
+      delete: mockDelete,
     })),
   },
 }));
@@ -44,78 +43,7 @@ describe("EventForm", () => {
       Promise.resolve({ id, ...data }),
     );
     mockGetOne.mockRejectedValue(new Error("Not found"));
-  });
-
-  // ============================================
-  // Helper Functions Tests
-  // ============================================
-
-  describe("generateSeriesId", () => {
-    it("generates unique IDs with series_ prefix", () => {
-      const id1 = generateSeriesId();
-      const id2 = generateSeriesId();
-
-      expect(id1).toMatch(/^series_\d+_[a-z0-9]+$/);
-      expect(id2).toMatch(/^series_\d+_[a-z0-9]+$/);
-      expect(id1).not.toBe(id2);
-    });
-  });
-
-  describe("generateRecurringDates", () => {
-    it("generates weekly dates with 7-day intervals", () => {
-      const dates = generateRecurringDates("2026-01-01", "weekly", 4);
-
-      expect(dates).toHaveLength(4);
-      expect(dates).toEqual([
-        "2026-01-01",
-        "2026-01-08",
-        "2026-01-15",
-        "2026-01-22",
-      ]);
-    });
-
-    it("generates biweekly dates with 14-day intervals", () => {
-      const dates = generateRecurringDates("2026-01-01", "biweekly", 4);
-
-      expect(dates).toHaveLength(4);
-      expect(dates).toEqual([
-        "2026-01-01",
-        "2026-01-15",
-        "2026-01-29",
-        "2026-02-12",
-      ]);
-    });
-
-    it("generates monthly dates correctly", () => {
-      const dates = generateRecurringDates("2026-01-15", "monthly", 4);
-
-      expect(dates).toHaveLength(4);
-      expect(dates).toEqual([
-        "2026-01-15",
-        "2026-02-15",
-        "2026-03-15",
-        "2026-04-15",
-      ]);
-    });
-
-    it("handles month boundary crossings for weekly pattern", () => {
-      const dates = generateRecurringDates("2026-01-29", "weekly", 3);
-
-      expect(dates).toEqual(["2026-01-29", "2026-02-05", "2026-02-12"]);
-    });
-
-    it("handles year boundary crossings", () => {
-      const dates = generateRecurringDates("2026-12-15", "monthly", 3);
-
-      expect(dates).toEqual(["2026-12-15", "2027-01-15", "2027-02-15"]);
-    });
-
-    it("generates single date when count is 1", () => {
-      const dates = generateRecurringDates("2026-01-01", "weekly", 1);
-
-      expect(dates).toHaveLength(1);
-      expect(dates).toEqual(["2026-01-01"]);
-    });
+    mockDelete.mockResolvedValue(true);
   });
 
   // ============================================
@@ -480,6 +408,37 @@ describe("EventForm", () => {
       expect(onSuccess).toHaveBeenCalled();
     });
 
+    it("creates a monthly series from the 31st with clamped dates", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      render(<EventForm onSuccess={onSuccess} />);
+
+      await user.type(screen.getByLabelText(/title/i), "Monthly Event");
+      await user.click(screen.getByLabelText(/create recurring event/i));
+      await user.selectOptions(screen.getByLabelText(/repeat/i), "monthly");
+      await user.type(screen.getByLabelText(/start date/i), "2026-01-31");
+      await user.type(screen.getByLabelText(/^time \*/i), "18:00");
+      await user.type(screen.getByLabelText(/^location \*/i), "Test Location");
+
+      // Preview shows the clamped last date
+      expect(screen.getByText("2026-04-30")).toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole("button", { name: /create 4 events/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockCreate).toHaveBeenCalledTimes(4);
+      });
+      expect(mockCreate.mock.calls.map((call) => call[0].date)).toEqual([
+        "2026-01-31",
+        "2026-02-28",
+        "2026-03-31",
+        "2026-04-30",
+      ]);
+      expect(onSuccess).toHaveBeenCalled();
+    });
+
     it("updates existing event without creating new ones", async () => {
       const user = userEvent.setup();
       const onSuccess = vi.fn();
@@ -639,6 +598,117 @@ describe("EventForm", () => {
         expect(submitButton).not.toBeDisabled();
         expect(submitButton).toHaveTextContent(/create event/i);
       });
+    });
+  });
+
+  describe("Partial series failure", () => {
+    async function fillAndSubmitRecurring(
+      user: ReturnType<typeof userEvent.setup>,
+    ) {
+      await user.type(screen.getByLabelText(/title/i), "Recurring Event");
+      await user.click(screen.getByLabelText(/create recurring event/i));
+      await user.type(screen.getByLabelText(/start date/i), "2026-01-01");
+      await user.type(screen.getByLabelText(/^time \*/i), "18:00");
+      await user.type(screen.getByLabelText(/^location \*/i), "Test Location");
+      await user.click(
+        screen.getByRole("button", { name: /create 4 events/i }),
+      );
+    }
+
+    function failOnThirdCreate() {
+      let n = 0;
+      mockCreate.mockImplementation((data) => {
+        n++;
+        if (n === 3) return Promise.reject(new Error("Server exploded"));
+        return Promise.resolve({ id: `evt_${n}`, ...data });
+      });
+    }
+
+    it("deletes the already-created occurrences and shows the error", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      failOnThirdCreate();
+
+      render(<EventForm onSuccess={onSuccess} />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/server exploded/i)).toBeInTheDocument();
+      });
+
+      expect(mockCreate).toHaveBeenCalledTimes(3);
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(mockDelete).toHaveBeenCalledWith("evt_1");
+      expect(mockDelete).toHaveBeenCalledWith("evt_2");
+      expect(
+        screen.getByText(/failed to create event 3 of 4/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/the 2 events already created were removed/i),
+      ).toBeInTheDocument();
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: /create 4 events/i }),
+      ).not.toBeDisabled();
+    });
+
+    it("tells the user which events remain when a cleanup delete fails", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      failOnThirdCreate();
+      mockDelete.mockImplementation((id: string) =>
+        id === "evt_1"
+          ? Promise.reject(new Error("delete failed"))
+          : Promise.resolve(true),
+      );
+
+      render(<EventForm onSuccess={onSuccess} />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/cleanup failed/i)).toBeInTheDocument();
+      });
+
+      // Every record is attempted even though the first delete failed
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(screen.getByText(/cleanup failed/i).textContent).toBe(
+        "Failed to create event 3 of 4: Server exploded. Cleanup failed: 1 already-created event could not be removed and still exists: 2026-01-01. Delete it from the events list before retrying.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("lists every remaining event by date when all cleanup deletes fail", async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      failOnThirdCreate();
+      mockDelete.mockRejectedValue(new Error("delete failed"));
+
+      render(<EventForm onSuccess={onSuccess} />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/cleanup failed/i)).toBeInTheDocument();
+      });
+
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(screen.getByText(/cleanup failed/i).textContent).toBe(
+        "Failed to create event 3 of 4: Server exploded. Cleanup failed: 2 already-created events could not be removed and still exist: 2026-01-01, 2026-01-08. Delete them from the events list before retrying.",
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("deletes nothing when the first occurrence fails", async () => {
+      const user = userEvent.setup();
+      mockCreate.mockRejectedValue(new Error("Server exploded"));
+
+      render(<EventForm />);
+      await fillAndSubmitRecurring(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/server exploded/i)).toBeInTheDocument();
+      });
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(screen.getByText(/no events were created/i)).toBeInTheDocument();
     });
   });
 

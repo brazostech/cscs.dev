@@ -14,7 +14,7 @@ These are handled by two separate systems. GitHub Actions provides a configurabl
 
 We will use GitHub Actions for the CI validation pipeline and Netlify's native GitHub integration for deployment. These two systems operate independently.
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on every pull request targeting `main`. It executes seven steps: Node pin check, lint (ESLint), format check (Prettier `--check`), typecheck (`astro check`), tests (Vitest), Astro build, and Storybook build. See the 2026-11-01 amendment for #79 below.
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push to `main` and on every pull request targeting `main`. It executes these validation steps: Node pin check, lint (ESLint), format check (Prettier `--check`), typecheck (`astro check`), tests (Vitest), Astro build, and Storybook build. The amendments below add a pin check (#79) and, for #84, a PocketBase pin check and PocketBase API rule tests.
 
 Netlify watches the same repository and deploys independently when it detects a push to `main`, using its own auto-detected Astro build settings. Netlify is not triggered by or dependent on the GitHub Actions workflow.
 
@@ -44,3 +44,29 @@ Netlify watches the same repository and deploys independently when it detects a 
 
 - `engines.node` now requires `>=22.23.4`, the floor set by astro 7.4.2 and `@astrojs/react` 7.1.1 (jsdom 30 needs `^22.22.2`). This supersedes the `>=22.12` floor in the #79 amendment.
 - `.nvmrc`, the `Containerfile` base image and `netlify.toml` still state only the major version (22), so they track the latest 22.x. The CI pin check compares only the major. A local Node, a cached image or a Netlify build image older than 22.23.4 passes that check and then fails when `astro` starts.
+
+## Amendment (2026-11-02, #84)
+
+- Two steps were added: a PocketBase pin check (the version in `backend/Containerfile`, `podman-compose.yaml` and `backend/scripts/pocketbase-download.mjs` must agree; see the #86 amendment) and `npm run test:pb`, which runs the PocketBase API rule tests (`backend/test/`). A cache step for the downloaded PocketBase release (`actions/cache`) sits before the tests, and the job has `timeout-minutes: 15`.
+- `test:pb` downloads the pinned PocketBase release from `github.com/pocketbase/pocketbase/releases`, verifies its SHA-256 against checksums stored in that module, and runs it on a random local port against a temporary data directory with this repo's migrations. It never contacts the production API, and it does not use a local `backend/pocketbase` binary.
+- The required `build` check (ADR 0012) now depends on that download whenever the cache misses. If GitHub's release CDN is unavailable the download retries three times, then `build` fails. A checksum mismatch fails the job and is never retried. A failed run is re-run, or, as for any stuck check, covered by the admin bypass ADR 0012 reserves.
+
+## Amendment (2026-11-02, #86)
+
+- `backend/pocketbase` is no longer committed. It is gitignored, and `make pocketbase` (in `backend/`) installs it.
+- The PocketBase version, SHA-256 checksums and verified download moved from the test harness to `backend/scripts/pocketbase-download.mjs`. The harness and `make pocketbase` both import it. The pin check and the cache key in `ci.yml` follow that file.
+- After `test:pb`, CI runs `make -C backend pocketbase` twice (install, then no-op) and checks the version against the Containerfile.
+- The image build still downloads PocketBase without a checksum check (#122).
+
+## Amendment (2026-11-02, #119)
+
+- `setup-node` now runs with `check-latest: true`. Without it, setup-node accepted any Node 22 in the runner's tool cache, so a runner cached at 22.23.3 failed `engines.node >=22.23.4` (main run 41374299584, PR #130 run 41482663555). With it, setup-node resolves the newest 22.x and downloads it when the cache is older.
+- A step right after setup-node fails the job if the running Node does not satisfy `engines.node`, so a stale Node fails with a clear message instead of an `EBADENGINE` warning later. It supports only a `>=X.Y.Z` range and fails on any other form.
+- `check-latest` fails open: if setup-node cannot fetch the Node release manifest, it keeps the cached Node. The engines step then fails the job when that Node is too old, and the job needs a re-run.
+- The `Containerfile` and `netlify.toml` still state only the major version and float on `22`, as the #81 amendment notes.
+- Cost: when the cache is stale, setup-node downloads Node, which adds seconds to the run.
+
+## Amendment (2026-11-02, #88)
+
+- The `build` job runs a `Test agent hooks` step, before `npm ci`, that runs `scripts/test-agent-hooks.sh`. It extracts the shell commands in `.claude/skills/work-on-issue/SKILL.md` and fails if `.claude/hooks/prefer-github-mcp.sh` denies any of them. It needs `jq`, which ubuntu-latest provides. `permissions` is unchanged.
+- The step gates merges: editing any `SKILL.md` under `.claude/skills/`, `.claude/settings.json` or the `prefer-github-mcp.sh` hook can now fail the required `build` check.

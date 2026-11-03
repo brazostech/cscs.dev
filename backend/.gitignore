@@ -1,6 +1,11 @@
 # PocketBase runtime data - contains database, uploads, and user data
 pb_data/
 
+# Local PocketBase binary installed by `make pocketbase`
+/pocketbase
+# Left behind if `make pocketbase` is killed mid-install
+/pocketbase.*.tmp
+
 # PocketBase migrations (may want to track these eventually)
 # Uncomment the line below to track migrations in git
 # pb_migrations/
