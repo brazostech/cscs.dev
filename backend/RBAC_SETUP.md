@@ -156,6 +156,24 @@ function EventsList() {
 }
 ```
 
+### Example: Guarding a whole page
+
+```tsx
+import RequireRole from "../components/RequireRole";
+
+// A signed-out visitor goes to /login, a non-moderator sees a permission
+// notice, and the children mount (and fetch) only for a moderator.
+export default function CreateEventPage() {
+  return (
+    <RequireRole requiredRole="moderator">
+      <EventFormBody />
+    </RequireRole>
+  );
+}
+```
+
+`RequireRole` is UX only. The API rules below still decide what is allowed.
+
 ## Security Notes
 
 1. **Frontend checks are for UX only** - Always enforce permissions on the backend via API rules

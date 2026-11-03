@@ -230,9 +230,11 @@ The main tracked files and directories:
 │   │   └── Layout.astro
 │   ├── lib/
 │   │   ├── pocketbase.ts          # PocketBase client and typed helpers
-│   │   └── pocketbase.test.ts
+│   │   ├── types.ts               # record types for the collections
+│   │   ├── use*.ts                # shared hooks (useLatestRequest, useRedirectToLogin)
+│   │   └── *.test.ts
 │   ├── pages/
-│   │   ├── app/                   # authenticated app: dashboard, events, books
+│   │   ├── app/                   # authenticated app: dashboard, events, books; moderator-only create pages
 │   │   ├── blog/                  # blog index and post route
 │   │   └── *.astro                # public pages and auth flows
 │   ├── stores/

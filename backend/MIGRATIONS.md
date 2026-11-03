@@ -291,7 +291,7 @@ cp backend/pb_data/data.db.backup backend/pb_data/data.db
 
 PocketBase writes editor definitions to `backend/pb_data/types.d.ts`, and the migration files reference that path in a `/// <reference path="..." />` comment for editor support. `pb_data/` is gitignored: the file is generated locally, absent from a fresh clone, and never committed.
 
-Do not import from `pb_data/`. The app declares its PocketBase types by hand in `src/lib/pocketbase.ts` (`AuthUser`, `RsvpData`, `BookData`); update those interfaces when a schema change affects them.
+Do not import from `pb_data/`. The app declares its PocketBase types by hand in `src/lib/types.ts` (`UserRecord`, `EventRecord`, `RsvpRecord`, `BookRecord`); update those interfaces when a schema change affects them.
 
 ## Resources
 

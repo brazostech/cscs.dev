@@ -27,10 +27,6 @@ export const pb = new PocketBase(PB_URL);
 // Enable auto cancellation for duplicated requests
 pb.autoCancellation(false);
 
-// Types for user authentication
-/** @deprecated use `UserRecord` from `./types` */
-export type AuthUser = UserRecord;
-
 export interface RegisterData {
   email: string;
   password: string;
@@ -87,9 +83,6 @@ export async function requestVerification(email: string) {
 // ============================================
 // RSVP Functions
 // ============================================
-
-/** @deprecated use `RsvpRecord` from `./types` */
-export type RsvpData = RsvpRecord;
 
 /**
  * RSVP to an event (creates attendance record)
@@ -199,9 +192,6 @@ export async function getUserEventRsvps(
 // ============================================
 // Book Club Functions
 // ============================================
-
-/** @deprecated use `BookRecord` from `./types` */
-export type BookData = BookRecord;
 
 /**
  * Get the currently-reading book (expects 0 or 1 result).

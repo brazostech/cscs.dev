@@ -6,7 +6,7 @@ Instructions for AI coding agents. `CLAUDE.md` is a symlink to this file.
 
 - **Project**: CSCS community website — Astro 7 + React 19, Tailwind CSS v4, PocketBase backend, Catalyst UI Kit
 - **Worktree required**: All implementation work must happen in a git worktree. Use `EnterWorktree` before editing project files. A hook enforces this.
-- **GitHub MCP tools**: Use MCP tools (not `gh` CLI) for PRs, issues, etc. A hook redirects `gh` commands.
+- **GitHub MCP tools**: Use MCP tools (not `gh` CLI) for PRs, issues, etc. A hook redirects `gh pr`, `gh issue` and `gh search`. `gh run list`, `gh run watch` and `gh run view` are allowed for waiting on CI and reading logs.
 - **Package manager**: npm only (yarn/pnpm/bun are denied by settings)
 
 ## Commands
@@ -23,6 +23,7 @@ npm run test:run     # Vitest (single run)
 npm run test:pb      # PocketBase API rule tests (downloads PocketBase v0.34.0)
 npm run test:coverage # Vitest with v8 coverage
 npm run build-storybook # Build Storybook
+scripts/test-agent-hooks.sh # Checks the work-on-issue skill's commands pass the .claude hooks (needs jq)
 make -C backend pocketbase # Install the pinned PocketBase at backend/pocketbase (gitignored, not committed)
 ```
 
@@ -57,9 +58,9 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 
 ### Error Handling & Async
 
-- try/catch with `err instanceof Error ? err.message : "fallback"` pattern. List pages use `errorMessage()` from `src/components/ListStates.tsx` for it.
+- try/catch with `err instanceof Error ? err.message : "fallback"` pattern. Pages that load data use `errorMessage()` from `src/components/ListStates.tsx` for it.
 - Loading state with disabled submit buttons during async operations
-- List pages share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty and error states, `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
+- Pages that load data or show an empty or error state share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty, error and no-permission states, which also takes `children` such as a link, and `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
 
 ## Architecture
 
@@ -69,9 +70,9 @@ src/
     catalyst/         # UI kit — wrap by default, edit only with a stated reason
   content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
-  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts); shared hooks (useLatestRequest.ts)
+  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts); shared hooks (useLatestRequest.ts, useRedirectToLogin.ts)
   pages/              # File-based routing
-    app/              # Authenticated pages (dashboard, events, books)
+    app/              # Authenticated pages (dashboard, events, books, create-event, create-book)
   stores/             # React state (authStore.ts → useAuth() hook)
   test/               # Mocks and factories
 ```
@@ -79,7 +80,7 @@ src/
 ### Routing
 
 - `/` — Home | `/blog`, `/blog/[slug]` — Blog | `/book-club` — Book club | `/schedule` — Events
-- `/app/dashboard`, `/app/events`, `/app/books` — Authenticated app pages
+- `/app/dashboard`, `/app/events`, `/app/books` — Authenticated app pages | `/app/create-event`, `/app/create-book` — Moderator-only forms (`?edit=<id>` to edit)
 - `/login`, `/register`, `/verify-email`, `/account` — Auth flows
 
 ### PocketBase Integration
@@ -88,6 +89,7 @@ src/
 - Record types: `src/lib/types.ts` (`EventRecord`, `RsvpRecord`, `BookRecord`, `UserRecord`) mirror `backend/pb_migrations`. Use them as generics, `pb.collection<EventRecord>("events")`, and update them in the same commit as a migration.
 - Collections: `users` (auth), `events`, `rsvps`, `books`
 - Auth: `useAuth()` hook for React components, `user?.role === "moderator"` for admin checks
+- Protected pages: wrap a page that only some roles may use in `RequireRole` (`src/components/RequireRole.tsx`), inside the page's React component (see `EventFormWrapper`), not around an island in the `.astro` file: a nested `client:only` island keeps running after the guard hides it. It redirects a signed-out visitor to `/login`, shows a permission notice to a user without the role, and mounts its children (so they fetch nothing) only for a matching user. Do not copy a role check into the form. It is UX only; the API rules above are the enforcement. A page that loads data for any signed-in user calls `useRedirectToLogin(isLoggedIn)` from `src/lib/useRedirectToLogin.ts` and fetches only when `isLoggedIn`.
 - RBAC: Public list/view, moderator-only create/update/delete (enforced via API rules)
 
 ### Catalyst UI Kit
@@ -138,7 +140,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Commits**: conventional commits — `feat:`, `fix:`, `chore:`, `docs:`. Brief subject line, body for "why".
 - **PRs**: create via GitHub MCP tools. Title under 70 chars. Body with `## Summary` and `## Test plan`. `main` takes changes only through PRs (ruleset, ADR 0012).
 - **Merging**: squash only. The PR title becomes the commit subject on `main`, so it must be a Conventional Commit; the body becomes the commit message. Branches delete on merge.
-- **CI**: PRs run lint, format check, typecheck, tests, PocketBase API rule tests (`npm run test:pb`), build, Storybook build via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
+- **CI**: PRs run lint, format check, typecheck, tests, PocketBase API rule tests (`npm run test:pb`), build, Storybook build, and the agent hook test via GitHub Actions. The `build` job and Netlify's `deploy-preview` must both pass before merge.
 
 ## Boundaries
 
@@ -157,7 +159,7 @@ Store dates as text (`YYYY-MM-DD`). Parse with `new Date(year, month - 1, day)` 
 - **Auth system details**: `doc/authentication.md`
 - **Project audit & known issues**: `doc/audit.md`
 - **Feature roadmap**: `doc/improvements.md`
-- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, PocketBase API rule tests, build, Storybook build)
+- **CI pipeline**: `.github/workflows/ci.yml` (lint, format check, typecheck, test, PocketBase API rule tests, build, Storybook build, agent hook test)
 - **Hook & skill docs**: `.claude/README.md`
 
 ## Worktree Workflow

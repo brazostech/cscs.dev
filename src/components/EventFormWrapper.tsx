@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import RequireRole from "./RequireRole";
 import EventForm from "./EventForm";
 
-export default function EventFormWrapper() {
+function EventFormWrapperBody() {
   const [eventId, setEventId] = useState<string | undefined>(undefined);
   const [isReady, setIsReady] = useState(false);
 
@@ -9,8 +10,6 @@ export default function EventFormWrapper() {
     // Read the edit ID from URL on client side
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get("edit");
-
-    console.log("EventFormWrapper: editId from URL:", editId);
 
     if (editId) {
       setEventId(editId);
@@ -44,5 +43,19 @@ export default function EventFormWrapper() {
         <EventForm eventId={eventId} />
       </div>
     </div>
+  );
+}
+
+/**
+ * The `/app/create-event` page: the form, for moderators only. The guard is
+ * inside this component, not wrapped around it in the `.astro` page, so the
+ * form is an ordinary React child that unmounts with the guard (a second
+ * `client:only` island would keep running after the guard hid it).
+ */
+export default function EventFormWrapper() {
+  return (
+    <RequireRole requiredRole="moderator">
+      <EventFormWrapperBody />
+    </RequireRole>
   );
 }
