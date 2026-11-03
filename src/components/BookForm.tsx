@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { pb } from "../lib/pocketbase";
+import type { BookRecord } from "../lib/types";
 import { Button } from "./catalyst/button";
 import { Field, Label } from "./catalyst/fieldset";
 import { Input } from "./catalyst/input";
@@ -12,16 +13,18 @@ interface BookFormProps {
   onCancel?: () => void;
 }
 
-interface BookFormData {
-  title: string;
-  author: string;
-  description: string;
-  status: "reading" | "completed";
-  purchase_link: string;
-  start_date: string;
-  end_date: string;
-  sort_order: number;
-}
+/** The fields the form edits; the cover image is handled apart, as a file. */
+type BookFormData = Pick<
+  BookRecord,
+  | "title"
+  | "author"
+  | "description"
+  | "status"
+  | "purchase_link"
+  | "start_date"
+  | "end_date"
+  | "sort_order"
+>;
 
 export default function BookForm({
   bookId,
@@ -52,7 +55,7 @@ export default function BookForm({
 
   async function loadBook() {
     try {
-      const book = await pb.collection("books").getOne(bookId!);
+      const book = await pb.collection<BookRecord>("books").getOne(bookId!);
       setFormData({
         title: book.title || "",
         author: book.author || "",
@@ -94,9 +97,9 @@ export default function BookForm({
       }
 
       if (bookId) {
-        await pb.collection("books").update(bookId, data);
+        await pb.collection<BookRecord>("books").update(bookId, data);
       } else {
-        await pb.collection("books").create(data);
+        await pb.collection<BookRecord>("books").create(data);
       }
 
       if (onSuccess) {

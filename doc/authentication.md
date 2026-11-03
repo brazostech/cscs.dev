@@ -74,12 +74,15 @@ The admin UI will be available at `http://localhost:8080/_/`
 - `/login` - User login page
 - `/register` - User registration page
 - `/account` - Protected account dashboard (requires authentication)
+- `/app/create-event`, `/app/create-book` - Moderator-only forms (`?edit=<id>` edits), guarded by `RequireRole`
 
 ### Components
 
 - `LoginForm.tsx` - Login form with email/password
 - `RegisterForm.tsx` - Registration form with email/password/name
 - `AccountDashboard.tsx` - User profile and logout
+- `RequireRole.tsx` - Guard for pages that only some roles may use
+- `src/lib/useRedirectToLogin.ts` - Hook that sends a signed-out visitor to `/login`
 
 ### Authentication Flow
 
@@ -96,8 +99,9 @@ The admin UI will be available at `http://localhost:8080/_/`
    - Redirects to `/account`
 
 3. **Protected Routes**: Client-side checks
-   - Components like `AccountDashboard` check auth status
+   - Pages use `RequireRole` (role-gated) or `useRedirectToLogin` (any signed-in user); `AccountDashboard` predates them and checks auth itself
    - Unauthenticated users redirected to `/login` in-browser
+   - A signed-in user without the required role sees a permission notice
    - Auth state persists via localStorage
 
 4. **Logout**: User signs out from `/account`
@@ -128,7 +132,7 @@ const { user, isAuthenticated, isLoading } = useAuth();
 
 ### Adding Protected Routes
 
-This is a static site, so protection is client-side only. Components check auth status using the `useAuth()` hook and redirect if needed. See `AccountDashboard.tsx` for an example.
+This is a static site, so protection is client-side only, and PocketBase's API rules are the real enforcement. Components check auth status using the `useAuth()` hook and redirect if needed. New pages use `RequireRole` (`src/components/RequireRole.tsx`) or `useRedirectToLogin` (`src/lib/useRedirectToLogin.ts`); `AccountDashboard.tsx` is the legacy pattern, with its own `isLoading` branch, and is not the example to copy. A page that only some roles may use wraps its content in `RequireRole`, inside its React component (see `EventFormWrapper.tsx`): a signed-out visitor goes to `/login`, another user sees a "You don't have permission" notice, and the matching role sees the page. It is a UX guard, not security.
 
 ### Customizing User Fields
 

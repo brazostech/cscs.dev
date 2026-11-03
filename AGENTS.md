@@ -59,7 +59,7 @@ Node version is pinned in `.nvmrc` (22). CI reads it directly; the `Containerfil
 
 - try/catch with `err instanceof Error ? err.message : "fallback"` pattern. Pages that load data use `errorMessage()` from `src/components/ListStates.tsx` for it.
 - Loading state with disabled submit buttons during async operations
-- Pages that load data or show an empty or error state share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty and error states, which also takes `children` such as a link, and `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
+- Pages that load data or show an empty or error state share `src/components/ListStates.tsx` (`Spinner` with a `label`, `Notice` for empty, error and no-permission states, which also takes `children` such as a link, and `errorMessage`) and the `useLatestRequest` hook in `src/lib/useLatestRequest.ts`. Do not copy them into a new page. Write `const beginLoad = useLatestRequest()`, call `const isLatest = beginLoad()` at the start of every load, and return early when `isLatest()` is false after each `await` and in `catch`, so a slow earlier reload cannot overwrite a newer one. Guard a loading flag set in `finally` the same way, so a dropped load does not clear state a newer load owns. After a successful delete, also remove the record from local state so it disappears before the reload lands.
 
 ## Architecture
 
@@ -69,9 +69,9 @@ src/
     catalyst/         # UI kit — wrap by default, edit only with a stated reason
   content/blog/       # Markdown blog posts (collection defined in src/content.config.ts: glob loader + Zod schema)
   layouts/            # Astro layouts (Layout.astro accepts title, description)
-  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts); shared hooks (useLatestRequest.ts)
+  lib/                # PocketBase client and helpers (pocketbase.ts); pure helpers (recurrence.ts); shared hooks (useLatestRequest.ts, useRedirectToLogin.ts)
   pages/              # File-based routing
-    app/              # Authenticated pages (dashboard, events, books)
+    app/              # Authenticated pages (dashboard, events, books, create-event, create-book)
   stores/             # React state (authStore.ts → useAuth() hook)
   test/               # Mocks and factories
 ```
@@ -79,7 +79,7 @@ src/
 ### Routing
 
 - `/` — Home | `/blog`, `/blog/[slug]` — Blog | `/book-club` — Book club | `/schedule` — Events
-- `/app/dashboard`, `/app/events`, `/app/books` — Authenticated app pages
+- `/app/dashboard`, `/app/events`, `/app/books` — Authenticated app pages | `/app/create-event`, `/app/create-book` — Moderator-only forms (`?edit=<id>` to edit)
 - `/login`, `/register`, `/verify-email`, `/account` — Auth flows
 
 ### PocketBase Integration
@@ -88,6 +88,7 @@ src/
 - Record types: `src/lib/types.ts` (`EventRecord`, `RsvpRecord`, `BookRecord`, `UserRecord`) mirror `backend/pb_migrations`. Use them as generics, `pb.collection<EventRecord>("events")`, and update them in the same commit as a migration.
 - Collections: `users` (auth), `events`, `rsvps`, `books`
 - Auth: `useAuth()` hook for React components, `user?.role === "moderator"` for admin checks
+- Protected pages: wrap a page that only some roles may use in `RequireRole` (`src/components/RequireRole.tsx`), inside the page's React component (see `EventFormWrapper`), not around an island in the `.astro` file: a nested `client:only` island keeps running after the guard hides it. It redirects a signed-out visitor to `/login`, shows a permission notice to a user without the role, and mounts its children (so they fetch nothing) only for a matching user. Do not copy a role check into the form. It is UX only; the API rules above are the enforcement. A page that loads data for any signed-in user calls `useRedirectToLogin(isLoggedIn)` from `src/lib/useRedirectToLogin.ts` and fetches only when `isLoggedIn`.
 - RBAC: Public list/view, moderator-only create/update/delete (enforced via API rules)
 
 ### Catalyst UI Kit

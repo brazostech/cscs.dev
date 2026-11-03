@@ -7,6 +7,7 @@ import {
 import { pb } from "../lib/pocketbase";
 import type { BookRecord } from "../lib/types";
 import { useLatestRequest } from "../lib/useLatestRequest";
+import { useRedirectToLogin } from "../lib/useRedirectToLogin";
 import { useAuth } from "../stores/authStore";
 import { Badge, BadgeButton } from "./catalyst/badge";
 import { Button } from "./catalyst/button";
@@ -104,13 +105,12 @@ export default function BooksList() {
     }
   }, [beginLoad]);
 
-  // Same gate as before the port: no signed-in user means the login page.
+  useRedirectToLogin(isLoggedIn);
+
   useEffect(() => {
-    if (!isLoggedIn) {
-      window.location.href = "/login";
-      return;
+    if (isLoggedIn) {
+      loadBooks();
     }
-    loadBooks();
   }, [isLoggedIn, loadBooks]);
 
   async function handleDelete(book: BookRecord) {
